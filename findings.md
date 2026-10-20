@@ -98,3 +98,12 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **入场点手算 oracle(测试强断言)**:入场 bar=idx 60(close 102 > 昨日 20 日高 101);横盘段 TR≡2.0(high-low=2)、入场 bar TR=max(4.02,3.02,1.0)=4.02 → ATR=(2.0*13+4.02)/14=30.02/14≈2.1442857,与 talib.atr 逐位相等(已实测);unit=floor(1e6*1%/2.1442857)=4663 精确断言(4 单加仓 4663/4422/4257/4153,共 17495)
 - **brief 数据注释 bug:"暴跌触发 2N 止损" 实际不成立**——10 日通道下破先于 2N 止损发生(决策 bar idx 83:close 120 < exit_low_prev 123.75,而 stop=108-2*ATR≈102.93 从未被 low≤118.8 触及)→ 全平走 cancel_all+限价卖,成交 max(114.0, open 120)=120;测试名 `test_stop_loss_full_exit` 保留(意图=暴跌全平),断言 buys==sells + pos==0 + 无残留 stop 单
 - **registry 扩展保持原 6 条目逐字节不变**(git diff 仅增行):`turtle` 条目 `signal=None`、`kind/mode="turtle"`,defaults 键集合 == `TurtleStrategy.parameters` 集合(程序化断言);defaults 取测试实参配置(atr_days=14、am_size=60;类默认 am_size=100)
+
+## 策略层(Task 13)
+
+- **ArrayManager 暖机边界(utility.py:529-531 实测)**:`inited` 于第 `size` 次 update 即置真 → 首个决策 bar = `bars[am_size-1]`、t+1 首笔成交 = `bars[am_size]`(brief 的 `bars[10]` 断言按"暖机后"语义成立);`make_bars` 按自然日逐日生成(含周末),"每周期首个交易日"即该周期首个 bar
+- **brief 测试三处适配**:`TradeData.time` 不存在→`datetime`(Task 7);`direction.value==1` 不成立→枚举直比(Task 10);test_amount_floor 的 `step=0.05` 使决策收盘 100.45→`floor(1000/100.45)=9` 股且次月还能买 1 股(与"恰 1 笔 10 股"矛盾)→改 `step=0.0` 恒价 100,10 股后现金 48.9<一股价、后续全跳过,现金 oracle 48.9 精确断言
+- **brief CAPITAL=10_000 不够 400 根月定投全程**:14 个周期全额定投需 ≈13.2k,现金 2022-11 即耗尽 → 2023 年零买入,跨年月键 (2023,1) 无法验证 → test1/test4 提到 20_000,并加全覆盖 oracle `{2022-01..2023-02}` 每月恰一笔
+- **现金硬约束语义(brief 防护,测试已验)**:`if self.cash < bar.close_price: return` + `shares=floor(min(amount, cash)/close)` → 现金不足额定但够 1 股时按能力部分买入;weekly 10k/amount500 场景共 24 笔(≥brief 阈值 20),biweekly 14 笔(≥10)
+- **ISO 锚定**:200 根自 2022-01-03(ISO 周 1 周一)止于 07-22(周 29),暖机 10 根落在周 2 周中 → 首笔当周即买("区间起点锚定"语义),周 2..29 全有买入;biweekly 的 `(year, week//2)` 跨年边界 demo 可接受(本测试数据不跨年,未暴露)
+- 现金守恒恒等式 1e-6 精确成立(期末 pos>0);registry 原 7 条目仅增行,`dca` defaults 取测试验证配置(am_size=10),键集合 == parameters 集合

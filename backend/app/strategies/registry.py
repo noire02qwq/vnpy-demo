@@ -1,5 +1,6 @@
 """策略形态注册表:API 层与 meta 端点的唯一映射源。"""
 from app.strategies.cross import CrossTradeStrategy
+from app.strategies.dca import DcaStrategy
 from app.strategies.tpsl import CrossTpslStrategy
 from app.strategies.turtle import TurtleStrategy
 
@@ -55,4 +56,15 @@ STRATEGY_REGISTRY["turtle"] = {
     "signal": None,
     "mode": "turtle",
     "defaults": _TURTLE_DEFAULTS,
+}
+
+# dca 形态默认值取测试验证过的配置(am_size=10,月定投 1000)
+_DCA_DEFAULTS = {"interval": "monthly", "amount": 1000.0, "am_size": 10}
+
+STRATEGY_REGISTRY["dca"] = {
+    "cls": DcaStrategy,
+    "kind": "dca",
+    "signal": None,
+    "mode": "dca",
+    "defaults": _DCA_DEFAULTS,
 }
