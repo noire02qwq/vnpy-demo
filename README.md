@@ -33,6 +33,22 @@ API 骨架:`GET /healthz`;完整 REST(`/api/v1/*`)见设计 spec §8。
 
 - 交互式 API 文档:启动后访问 http://127.0.0.1:8000/docs
 
+## 快速开始(前端)
+
+前置:Node 18+,后端已在 :8000 运行。
+
+```bash
+cd frontend
+npm install               # 安装依赖(含 devDependency electron)
+npx expo start --web      # web 开发模式(:8081,自动开浏览器)
+npm test                  # jest 全量(102 tests)
+npx tsc --noEmit          # 类型检查
+
+# 桌面壳(dev 模式连 dev server;dist 模式加载静态导出)
+npm run desktop           # 需另开终端跑 npx expo start --web
+npx expo export -p web && npm run desktop:dist
+```
+
 ## 当前状态(实时更新)
 
 | 里程碑 | 状态 |
@@ -43,10 +59,10 @@ API 骨架:`GET /healthz`;完整 REST(`/api/v1/*`)见设计 spec §8。
 | M2 引擎封装 + 曲线导出 | ✅ 测试全绿 |
 | M3 策略 ×8 形态 | ✅ 测试全绿 |
 | M4 指标 + API + 落库 | ✅ 测试全绿(68 tests,Task 15-18 完成;Task 19 收尾中) |
-| M5 前端(Expo + TradingView) | 🚧 进行中(F0 骨架/F1 API客户端/F2 图表映射/F3 双平台图表/F4 动态表单/F5 三页集成/F6 Electron 桌面壳已完成,F5 待评审) |
+| M5 前端(Expo + TradingView) | ✅ 102 tests + tsc clean;web 导出 + Electron 桌面壳冒烟通过;浏览器人工联调待用户验证 |
 | M6 Docker + 端到端验收 | ⏳ 计划中 |
 
-测试:105 passed(backend);ruff clean;后端已通过全分支终审(signal_kind 注入等 9 项修复落地)。每任务 TDD(先红后绿)+ 评审后提交推送。
+测试:105 passed(backend)+ 102 passed(frontend);ruff clean;后端已通过全分支终审(signal_kind 注入等 9 项修复落地)。每任务 TDD(先红后绿)+ 评审后提交推送。
 
 ## 文档树
 

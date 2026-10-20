@@ -232,3 +232,15 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **electron 44.9.1(devDep `^44.9.1`)**:npm 11.19 下载二进制正常;注意 agent 沙箱环境默认注入 `ELECTRON_RUN_AS_NODE=1`,electron 二进制会退化成纯 Node(`--version` 打的是 Node v24.22.0 而非 Electron v44.9.1),冒烟/日常运行须 `env -u ELECTRON_RUN_AS_NODE`。
 - **window-all-closed 全平台 quit(darwin 不保留)**:按 brief 简化处理,个人研究项目无需 dock 常驻语义。
 - **测试规模**:102 → 102(无新增测试:main.js 为薄壳,无可单测纯逻辑,验证以语法兜底 + DevTools 协议冒烟代替);全量 jest 7 suites 102 passed 不变。
+
+## 前端(F7)
+
+任务:M5 收尾——集成冒烟 + README + 全绿(2026-10-20)。状态:完成;浏览器人工联调待用户验证,余无偏差。记录:
+
+- **陈旧 dev 库 schema 漂移(create_all 不迁移,实锤 1 坑)**:首次 API 级回测 500,根因 `backend/data/backtest.db` 是 M4 Task 18 加 `metrics_json` 列之前创建的旧库(`runs` 表缺列,OperationalError);`init_session_factory` 的 `Base.metadata.create_all` 只建表不迁移。修法:删掉 git-ignored 的 dev 库重启即愈(测试全绿因 pytest 用临时库,故此坑只在长寿命 dev 环境暴露)。教训:dev 环境后端行为异常先查库 schema 版本,勿先疑代码。
+- **API 层端到端链路全通(真实数据,未限流)**:healthz ok → meta/strategies 8 形态 → data/fetch AAPL 2025 全年 250 行(cache_hit=false,yfinance 实拉)→ POST backtests(ema_cross 默认参数,total_return 21.24%/max_dd 5.63%/sharpe 1.486/alpha 0.187/beta 0.154,curves 4 键/candles 250 bars/trades 6 笔)→ GET backtests 列表含该 run → GET 单条一致。前端消费的四个端点契约字段与 F1 手写类型逐一吻合。
+- **curl 隐式走系统代理(坑)**:本机 curl 对 127.0.0.1 也被代理劫持(9000 端口返回 S3 风格 AccessDenied XML、9321 连接 000);`curl --noproxy '*'` 绕开。冒烟本地 curl 一律带 `--noproxy '*'`。
+- **静态导出动态路由形态**:`expo export -p web` 对 `/result/[id]` 导出字面量文件 `dist/result/[id].html`(URL 编码 `%5Bid%5D` 可直取);普通静态服务器直链 `/result/<id>` 404 属预期,SPA 内客户端导航与 Electron dist 模式(loadFile 后路由全在客户端)不受影响;若需静态托管支持深链,服务器需配 SPA fallback(留 M6 部署时处理)。
+- **9321 等本地端口起 python http.server 可行**,但 9000 被本机其他服务占用(S3 风格响应),冒烟换端口即避。
+- **产物冒烟证据**:index.html 200(22KB)、entry/index/history bundle 全 200、history.html/_sitemap.html/result/[id].html 全 200;后端与静态服务进程已 pkill 清理,端口 8000/9321 复核为空。
+- **测试规模**:102 passed / 7 suites 不变(F6 后无新代码,本任务为文档+冒烟);`npx tsc --noEmit` 干净;`npx expo export -p web` 复验通过(5 路由)。

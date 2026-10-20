@@ -30,6 +30,7 @@ web-build/
 *.sqlite3
 *.db
 data/cache/
+backend/data/
 
 # SDD scratch
 .superpowers/

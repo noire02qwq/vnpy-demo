@@ -17,3 +17,13 @@
 ## 会话 2026-10-20(Plan 1 执行,M1 数据层完成)
 - Task 0-6 全部通过评审:骨架(uv+vnpy4.5.0+ctastrategy1.4.1)、core 配置/错误、合成夹具、校验硬闸门(NaN/负 volume 整集拒绝)、BarData 转换(pandas3 适配)、yf1.7.0 客户端(None 防护)、下载日戳 parquet 缓存(pyarrow)
 - 测试 25 passed;ruff clean;每任务实时 commit+push
+
+## 会话 2026-10-20(M5 前端收官,F7 收尾)
+
+- [x] 集成冒烟(API 层端到端,真实数据未限流):后端 :8000 起服 → healthz ok → meta/strategies 8 形态 → data/fetch AAPL 2025 全年 250 行(yfinance 实拉,cache_hit=false)→ POST backtests(ema_cross 默认参数:total_return 21.24%、max_dd 5.63%、sharpe 1.486、trades 6 笔、candles 250 bars)→ GET backtests 历史列表含该 run → GET 单条与 POST 响应一致
+- [x] 坑:长寿命 dev 库 `backend/data/backtest.db` 为 M4 加 metrics_json 列前的旧 schema,POST 回测 500;删 git-ignored 旧库重启即愈(create_all 不迁移,详见 findings.md ## 前端(F7))
+- [x] web 产物冒烟:`npx expo export -p web`(5 路由)+ python http.server :9321 → index.html/bundles/history.html/_sitemap.html/result/[id].html 全 200;result/<id> 直链 404 属静态导出预期,SPA 客户端导航与 Electron dist 模式不受影响
+- [x] 坑:本机 curl 隐式走系统代理(127.0.0.1 也被劫持),`--noproxy '*'` 绕开
+- [x] `npm test` 102 passed / 7 suites;`npx tsc --noEmit` 干净;后台进程(uvicorn/http.server)已 pkill,端口复核为空
+- [x] README 根三处更新(M5 ✅/测试计数/快速开始前端段)+ frontend/README.md 中文新建(安装/测试/web/桌面)
+- [ ] 真实浏览器人工联调(配置 → 回测 → 结果页图表/指标/成交 → 历史页)待用户验证;API 层与产物层已全部打通
