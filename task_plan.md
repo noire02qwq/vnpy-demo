@@ -46,7 +46,7 @@
 - [x] 回测引擎封装:无 GUI 驱动、资金/持仓查询、equity 与持仓资金曲线导出(Task 7+14,52 测试绿)
 - [x] 策略:MACD / KDJ / 双EMA 金死叉 ×(金死叉对卖 | 金叉买+固定止盈止损)+ 海龟 + 定投(Task 10-13,registry 8 形态,51 测试绿)
 - [x] 指标:总收益/年化/Alpha/MDD/波动率/Beta/夏普/信息比率 + ^GSPC 基准对比曲线(初始归零)(Task 15,57 测试绿)
-- [ ] FastAPI API(拉数/回测/历史)+ SQLite 落库
+- [x] FastAPI API(拉数/回测/历史)+ SQLite 落库(Task 16-18,68 测试绿)
 - [ ] RN 前端:回测配置页 / 结果页(TradingView K线+指标+三线对比)/ 历史页
 - [ ] Docker:backend 镜像 + frontend(web)镜像,可分别构建运行
 - [ ] 文档树完善(docs/ 结构化)
