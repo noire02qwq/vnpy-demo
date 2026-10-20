@@ -85,8 +85,12 @@ class CrossTradeStrategy(CtaTemplate):
         cost = trade.price * trade.volume
         # 1.4.1 引擎无 fixed 参数,守卫取 0.0,成本模型退化为 rate-only
         fee = cost * self.cta_engine.rate + getattr(self.cta_engine, "fixed", 0.0)
+        # 引擎 equity 按 net_pnl 扣双边滑点(1.4.1 backtesting.py:1119)而成交价不含滑点
+        # (:722-725),现金账本记同一笔才能与引擎台账任意成本设置下精确对齐;
+        # getattr 防御无 size/slippage 属性的实盘引擎
+        slip = trade.volume * getattr(self.cta_engine, "size", 1) * getattr(self.cta_engine, "slippage", 0.0)
         if trade.direction == Direction.LONG:
-            self.cash -= cost + fee
+            self.cash -= cost + fee + slip
         else:
-            self.cash += cost - fee
+            self.cash += cost - fee - slip
         self.put_event()

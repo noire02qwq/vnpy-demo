@@ -68,9 +68,9 @@ def test_death_cross_exits_full() -> None:
 
 def test_cash_conservation() -> None:
     bars = build_bars()
-    # 引擎把逐笔滑点计入 net_pnl 但成交价不含滑点(vnpy_ctastrategy/backtesting.py:1119-1124),
-    # 策略现金按成交价记账 → 该恒等式仅在 slippage=0 时精确;rate 仍参与双边核对
-    run = _run(bars, CostSettings(slippage=0.0))
+    # 引擎 equity 按 net_pnl 扣双边滑点但成交价不含滑点(backtesting.py:722-725/1119),
+    # 策略 on_trade 记入同一笔滑点后,默认成本设置下现金账本与引擎台账精确对齐
+    run = _run(bars)
     st = run.engine.strategy
     close_last = bars[-1].close_price
     expected_cash = CAPITAL + run.stats["total_net_pnl"] - abs(st.pos) * close_last
@@ -81,6 +81,6 @@ def test_no_trade_during_warmup() -> None:
     bars = build_bars()
     run = _run(bars)
     trades = run.engine.get_all_trades()
-    if trades:
-        # brief 原文 t.time 不存在,同上改为 datetime
-        assert all(t.datetime >= bars[PARAMS["am_size"]].datetime for t in trades)
+    assert trades, "往返形态应有交易,零交易说明策略链路断裂"
+    # brief 原文 t.time 不存在,同上改为 datetime
+    assert all(t.datetime >= bars[PARAMS["am_size"]].datetime for t in trades)
