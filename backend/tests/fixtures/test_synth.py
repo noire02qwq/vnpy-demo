@@ -14,9 +14,11 @@ def test_make_bars_shapes() -> None:
 
 
 def test_determinism() -> None:
-    assert [b.close_price for b in make_bars(sine_closes(50))] == [
-        b.close_price for b in make_bars(sine_closes(50))
+    # 全字段对比,而非仅 close(输入直通值,不足以证确定性)
+    fields = lambda bars: [  # noqa: E731
+        (b.datetime, b.open_price, b.high_price, b.low_price, b.close_price, b.volume) for b in bars
     ]
+    assert fields(make_bars(sine_closes(50))) == fields(make_bars(sine_closes(50)))
 
 
 def test_v_shape() -> None:
