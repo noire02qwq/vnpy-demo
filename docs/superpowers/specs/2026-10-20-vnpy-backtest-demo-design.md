@@ -175,7 +175,7 @@ run_backtesting() → calculate_result() → stats = calculate_statistics()
 }
 ```
 
-`BacktestResult`:`{id, request, created_at, metrics, curves:{dates[], equity[], position_value[], benchmark[]}, candles:{dates[], open[], high[], low[], close[], volume[], overlays:{ema_fast?[], ema_slow?[]}, sub:{macd?{dif[],dea[],hist[]}, kdj?{k[],d[],j[]}}}, trades:[{time, direction, price, volume}]}`(trades 无 offset 字段——vnpy CTA 回测恒为 Offset.NONE,无信息量;metrics 中 vnpy 原生美元口径最大回撤以 `max_drawdown_amount` 键暴露,`max_drawdown` 保留 spec §7 的 0..1 小数口径)
+`BacktestResult`:`{id, request, metrics, curves:{dates[], equity[], position_value[], benchmark[]}, candles:{dates[], open[], high[], low[], close[], volume[], overlays:{ema_fast?[], ema_slow?[]}, sub:{macd?{dif[],dea[],hist[]}, kdj?{k[],d[],j[]}}}, trades:[{time, direction, price, volume}]}`(详情响应不含 created_at/stats_raw;`created_at` 仅出现在 GET /backtests 列表摘要 RunSummary 中。trades 无 offset 字段——vnpy CTA 回测恒为 Offset.NONE,无信息量;metrics 中 vnpy 原生美元口径最大回撤以 `max_drawdown_amount` 键暴露,`max_drawdown` 保留 spec §7 的 0..1 小数口径)
 
 错误码:`INVALID_SYMBOL / NO_DATA / RANGE_TOO_SHORT / RATE_LIMITED / BAD_PARAMS / RUN_NOT_FOUND / INTERNAL`。
 
