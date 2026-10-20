@@ -159,3 +159,15 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **F8 turtle 2N stop 数据设计(初版巨阴构造不成立)**:平坦 60 根后直接巨阴,10 日通道低 99 > 巨阴 close,同 bar on_bar 的通道离场分支与 stop 混淆难辨 → 数据加 5 根回调@97 把 10 日低点压到 96.03、ATR 抬到 2.36(stop=97.27),巨阴 close 98 > 96.03(通道不触发)而 low 97.02 ≤ stop(击穿)→ 恰 2 笔:buy@102 / stop sell@97.27 = min(stop_price, open 102)(同 bar limit 段 on_trade 挂 stop、stop 段快照继续撮合,Task 11 结论复用)
 - **F8 杂项**:500 文案固定"服务器内部错误"不回显 str(exc);BacktestRequest model_validator start<end(相等也 400);default_commission_fixed 删除(grep 仅 config 定义 + service 引用两处,service 侧改 `fixed=0.0` 显式注释,spec §8 已移除该键且 CostConfig extra="forbid")
 - **测试规模**:68 → 105(+37;brief 预估 ~6-8 为非参数化口径,参数化 6/6/2/8 形态遍历展开后 37:signal_kind 15 + 对齐 8 + CORS 3 + 限流 3 + 基准 3 + schema 1 + repo 1 + 日期序 2 + turtle 1),ruff 全绿;openapi.json 与 frontend/src/api/schema.json 已重新导出同步(6 路径不变,schema 内容随 CORS/middleware 无 API 面变化、BacktestRequest 校验行为变化不进 schema)
+
+## 前端(F0)
+
+- **create-expo-app@5.0.0(SDK 58)无 `default-typescript` 模板别名**:brief 的 `--template default-typescript` 走 npm pack 解析直接 404(`expo-template-default-typescript` 包不存在,JS 模板已淘汰)→ 改 `--template default`(expo-template-default@58.0.25,默认即 TypeScript,tsconfig strict 已开)
+- **frontend/ 非空冲突**:`frontend/src/api/schema.json`(后端 M4 导出)已被 git 跟踪,create-expo-app 拒绝非空目录 → 脚手架落在 .superpowers/(gitignored)临时目录再合并进 frontend/,schema.json 原样保留
+- **SDK 58 模板结构差异**:路由目录在 `src/app/`(非根 `app/`),demo 为 Tab 布局 + 一堆演示组件(ThemedText/AppTabs/AnimatedIcon 等)→ 按 brief/CLAUDE.md 结构迁回根 `app/`,demo 屏/组件/hooks/constants/global.css 全删,仅保留 app.json 引用的资产(icon/splash/favicon/android 自适应图标/expo.icon);模板附带的 AGENTS.md、.claude/settings.json(启用 expo 插件)、.vscode/、scripts/reset-project.js、LICENSE、README 一并删除保持最小骨架
+- **app.json web.output "server"→"static"**:SDK 58 模板默认 server 输出(需 Node 服务承载),与 CLAUDE.md「Electron 壳加载 dist/」矛盾 → 静态导出;`npx expo export -p web` 一次通过(3 条静态路由 /、/_sitemap、/+not-found,+not-found 为 expo-router 内置缺省)
+- **brief jest transformIgnorePatterns 正则少一个右括号**:原样粘贴即 `SyntaxError: Unterminated group`(`(?!(` 开了两组只收了一组)→ 补收尾 `)`(…lightweight-charts`))`),语义不变;lightweight-charts 仅作为未来转发模式预留,本任务未安装
+- **TS 6.0.3 + moduleResolution:"bundler" 不自动装载 @types/jest**:仅 @types/react 经 import 解析载入,describe/it/expect 全报 TS2593 → tsconfig 加 `types: ["jest"]`(编译器报错信息自带的修法)
+- **expo install --dev 偶发失败**:`npx expo install --dev jest jest-expo @testing-library/react-native @types/jest` 前三个成功,@testing-library/react-native 一步 npm spawn 非零退出;直接 `npm install --save-dev @testing-library/react-native` 即成功(transient)。最终版本:@testing-library/react-native ^14.1.0 / jest ~30.5.2 / jest-expo ~58.0.11 / @types/jest 30.0.0
+- **依赖集未裁剪**:模板依赖(SDK 对齐集)全部保留,未用到的 demo 依赖(reanimated/worklets/@expo/ui 等)不影响产物——export 只打包被 import 的模块;后续任务如需可再裁
+- **忽略栈验证**:`git check-ignore` 证实 frontend/dist、node_modules、.expo、expo-env.d.ts 均被忽略(模板 .gitignore 与根 .gitignore 叠加无冲突);frontend/src/ 因已有 api/schema.json 天然非空,无需 .gitkeep
