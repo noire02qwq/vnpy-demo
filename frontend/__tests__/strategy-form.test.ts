@@ -298,6 +298,56 @@ describe("buildRequest", () => {
     expect(req.benchmark_symbol).toBe("^GSPC");
     expect(req.warmup_bars).toBe(100);
   });
+
+  it("字符串参数原样透传(dca interval 不做数字强转)", () => {
+    const dcaMeta: StrategyMeta = {
+      type: "dca",
+      kind: "dca",
+      signal: null,
+      mode: "dca",
+      defaults: { interval: "monthly", amount: 1000.0, am_size: 10 },
+      schema: {
+        interval: { type: "string", enum: ["weekly", "biweekly", "monthly"] },
+        amount: { type: "number" },
+        am_size: { type: "integer", minimum: 1 },
+      },
+    };
+    const state = validState({
+      strategyType: "dca",
+      params: { interval: "monthly", amount: "1000", am_size: "10" },
+    });
+    const req = buildRequest(state, dcaMeta);
+    expect(req.strategy.params).toEqual({
+      interval: "monthly",
+      amount: 1000,
+      am_size: 10,
+    });
+    expect(Object.prototype.hasOwnProperty.call(req.strategy, "entry_pct")).toBe(false);
+  });
+});
+
+describe("validateForm 数字防线", () => {
+  it("schema 数字参数填非数字 → 参数 {键名} 需为数字", () => {
+    const state = validState({
+      params: { fast_period: "abc", slow_period: "20", am_size: "100" },
+    });
+    expect(validateForm(state, emaCrossMeta)).toBe("参数 fast_period 需为数字");
+  });
+
+  it("warmup 非数字 → 暖机根数需为数字", () => {
+    expect(validateForm(validState({ warmupBars: "abc" }), emaCrossMeta)).toBe(
+      "暖机根数需为数字",
+    );
+  });
+
+  it("佣金率/滑点非数字 → 对应中文报错", () => {
+    expect(validateForm(validState({ commissionRate: "x" }), emaCrossMeta)).toBe(
+      "佣金率需为数字",
+    );
+    expect(validateForm(validState({ slippage: "NaN" }), emaCrossMeta)).toBe(
+      "滑点需为数字",
+    );
+  });
 });
 
 describe("StrategyForm 组件 smoke", () => {

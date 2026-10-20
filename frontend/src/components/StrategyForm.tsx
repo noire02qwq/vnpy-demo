@@ -79,6 +79,12 @@ function toNumber(raw: string, fallback: number): number {
   return Number.isFinite(n) ? n : NaN;
 }
 
+/** 输入可解析为有限数字(空串放行,由各字段缺省逻辑兜底) */
+function isFiniteNumber(raw: string): boolean {
+  const trimmed = raw.trim();
+  return trimmed === "" || Number.isFinite(Number(trimmed));
+}
+
 /**
  * 提交前校验(镜像后端 BacktestRequest/StrategySpec 规则,顺序即报错优先级)。
  * 返回首个中文错误文案;全合法 → null。
@@ -120,6 +126,32 @@ export function validateForm(
       return "止损比例需大于 0";
     }
   }
+  // 数字防线:schema 数字参数(Number("") === 0,须先排除空串)与暖机/成本项须为有限数字
+  if (meta) {
+    for (const key of Object.keys(meta.schema)) {
+      const schemaType = meta.schema[key].type;
+      if (schemaType !== "number" && schemaType !== "integer") {
+        continue;
+      }
+      const raw = state.params[key];
+      if (raw === undefined) {
+        continue;
+      }
+      const text = String(raw).trim();
+      if (text === "" || !Number.isFinite(Number(text))) {
+        return `参数 ${key} 需为数字`;
+      }
+    }
+  }
+  if (!isFiniteNumber(state.warmupBars)) {
+    return "暖机根数需为数字";
+  }
+  if (!isFiniteNumber(state.commissionRate)) {
+    return "佣金率需为数字";
+  }
+  if (!isFiniteNumber(state.slippage)) {
+    return "滑点需为数字";
+  }
   return null;
 }
 
@@ -141,10 +173,15 @@ export function buildRequest(
       if (raw === undefined) {
         continue;
       }
-      params[key] =
-        meta.schema[key].type === "boolean"
-          ? Boolean(raw)
-          : Number(String(raw).trim());
+      // 按 schema 类型分支:数字才转换,字符串(interval 等 enum 值)原样透传
+      const schemaType = meta.schema[key].type;
+      if (schemaType === "boolean") {
+        params[key] = Boolean(raw);
+      } else if (schemaType === "string") {
+        params[key] = String(raw);
+      } else {
+        params[key] = Number(String(raw).trim());
+      }
     }
   }
 
