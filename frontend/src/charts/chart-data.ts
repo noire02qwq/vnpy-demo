@@ -1,7 +1,7 @@
 /**
  * 图表数据映射(纯函数):BacktestResult → lightweight-charts 可用结构,
- * 以及 WebView 注入用完整 HTML 文档。
- * HTML 内的初始化脚本占位见 INIT_PLACEHOLDER,F3 的 chart-init-script.ts 替换。
+ * 以及 WebView 注入用完整 HTML 文档(初始化脚本由 F3 的 chartInitScript
+ * 产出、经 buildChartHtml 第二参注入)。
  */
 import type { BacktestResult, KdjSeries, MacdSeries, Trade } from "../api/types";
 
@@ -42,7 +42,11 @@ export interface ChartPayload {
   emaFast?: number[];
   emaSlow?: number[];
   macd?: MacdSeries;
+  /** macd 柱预映射点(toHistogramMacd 产物,含红涨绿跌颜色;与 macd 同时出现) */
+  macdHist?: HistogramPoint[];
   kdj?: KdjSeries;
+  /** 交易标记(toMarkers 产物,candles 主图叠加;无成交时缺省) */
+  markers?: TradeMarker[];
   lines: { equity: number[]; position: number[]; benchmark: number[] };
   times: string[];
 }
@@ -121,8 +125,11 @@ export function buildChartPayload(result: BacktestResult): ChartPayload {
     candles: toCandles(result),
     ...(overlays?.ema_fast !== undefined ? { emaFast: overlays.ema_fast } : {}),
     ...(overlays?.ema_slow !== undefined ? { emaSlow: overlays.ema_slow } : {}),
-    ...(sub?.macd !== undefined ? { macd: sub.macd } : {}),
+    ...(sub?.macd !== undefined
+      ? { macd: sub.macd, macdHist: toHistogramMacd(sub.macd, result.candles.dates) }
+      : {}),
     ...(sub?.kdj !== undefined ? { kdj: sub.kdj } : {}),
+    ...(result.trades.length > 0 ? { markers: toMarkers(result.trades) } : {}),
     lines: {
       equity: result.curves.equity,
       position: result.curves.position_value,
@@ -140,10 +147,12 @@ const CDN_SCRIPT_TAG =
 
 /**
  * 生成 WebView 注入用完整 HTML:CDN 引入 lightweight-charts 5.2.1 +
- * `const PAYLOAD = <json>;` + 初始化占位符。
+ * `const PAYLOAD = <json>;` + 初始化脚本。
+ * F3 升级为双参:`initScript` 为 chartInitScript(kind) 的产物,原样替换
+ * INIT_PLACEHOLDER;缺省保持占位符(F2 单参调用点行为逐字节不变)。
  * JSON 里的 `<` 全部转义为 `\\u003c`,防 `</script>` 提前闭合标签逃逸。
  */
-export function buildChartHtml(payload: object): string {
+export function buildChartHtml(payload: object, initScript: string = INIT_PLACEHOLDER): string {
   const json = JSON.stringify(payload).replace(/</g, "\\u003c");
   return [
     "<!DOCTYPE html>",
@@ -153,7 +162,7 @@ export function buildChartHtml(payload: object): string {
     "</head>",
     '<body style="margin:0">',
     '<div id="chart" style="width:100%;height:100vh"></div>',
-    `<script>const PAYLOAD = ${json};${INIT_PLACEHOLDER}</script>`,
+    `<script>const PAYLOAD = ${json};${initScript}</script>`,
     "</body></html>",
   ].join("");
 }

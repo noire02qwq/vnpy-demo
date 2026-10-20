@@ -192,3 +192,17 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **toMarkers 颜色约定**:buy=绿 #26a69a/belowBar/arrowUp/"B",sell=红 #ef5350/aboveBar/arrowDown/"S"(lightweight-charts 官方示例配色,红绿与 MACD 柱国内约定一致)
 - **HTML 生成**:单行拼接,`<script>const PAYLOAD = <json>;/*__INIT__*/</script>` 中 json 经 `replace(/</g, "\\u003c")` 全量转义(payload 段无裸 `<`,连非 script 的 `<` 一并转义,比只防 `</script>` 更保守);INIT_PLACEHOLDER 导出为常量供 F3 精确替换;测试用 `/const PAYLOAD = (.*);/` 从 HTML 抠回 JSON 且深度相等(含含 `</script>` 的恶意值字段)
 - **测试规模**:brief Step 1 各组全实现 + 补 kdj 形态、0 值分界、多笔保序,18 passed(全量 35 = smoke 1 + api 16 + chart-data 18);`npx tsc --noEmit` exit 0
+
+## 前端(F3)
+
+- **lightweight-charts 5.2.1 导出面实测(npm,ESM-only)**:`CandlestickSeries/LineSeries/HistogramSeries/AreaSeries/BarSeries/BaselineSeries` 系列工厂常量 + `createChart/createSeriesMarkers/createTextWatermark` 等函数 + `ColorType` 等枚举;`version` 是**函数**非字符串。v5 markers 确为 `createSeriesMarkers(series, markers)`(brief 预期与实际一致);`addSeries(definition, options?: SeriesPartialOptionsMap[T])`,类型名 `XxxSeriesPartialOptions`、`ColorType.Solid = "solid"`(脚本串里直接写字面量 "solid" 双端通用)
+- **standalone 5.2.1 全局导出面(下载 grep dist 文件确认)**:`window.LightweightCharts = {...}` 暴露与 npm 包**同一集合**(CandlestickSeries/HistogramSeries/LineSeries 常量、createChart、createSeriesMarkers 都在)→ init 脚本直接用 `LightweightCharts.CandlestickSeries` 等,无需字符串 fallback;注意 standalone 产物**非 UMD**(纯 IIFE 只写 window),不可 require
+- **平台分派选 Metro 平台扩展(LightChart.web.tsx / LightChart.native.tsx,无 dispatcher 文件)**:react-native-webview 14.0.1 无 web 构建(exports 全无),运行时 Platform.OS 分派会把 webview 静态打进 web 包 → 必须按平台文件拆;不建 LightChart.tsx 占位(会被 web/native 双双遮蔽成死代码)。jest-expo haste 平台仅 `[android, ios, native]`(无 web)→ 测试中 web 实现只能显式路径导入,extensionless 导入在 jest 里解析到 .native
+- **tsc 需要 `moduleSuffixes`**:expo/tsconfig.base(SDK 58)未设置,extensionless `import "./LightChart"`(ThreeLineChart)在 tsc 下 TS2307 → frontend/tsconfig.json 加 `[".native", ".web", ""]`(native 优先与 jest 默认平台一致;Metro 侧不受影响自行解析)
+- **jest 里 lightweight-charts 不可解析**:exports map 仅 `import` 条件指向 .mjs(无 require),jest 30 的 CJS require 条件无匹配 → smoke 测试用 `jest.mock(..., { virtual: true })` 顶替(验证的是本仓库模块可导入性,非三方库本身)
+- **buildChartHtml 升级选「缺省参保旧签名」**:`buildChartHtml(payload, initScript = INIT_PLACEHOLDER)`——单参调用输出逐字节不变,F2 测试零改动;显式传脚本时占位符被整体替换
+- **ChartPayload 扩展两键(均向后兼容,F2 测试零改动)**:`macdHist?: HistogramPoint[]`(buildChartPayload 内调 toHistogramMacd 预映射,红涨绿跌颜色单一事实源,脚本/web 端零重复逻辑)、`markers?: TradeMarker[]`(toMarkers 产物,trades 为空则键缺省)——brief 的 "trades markers" 契约需要 payload 携带,而 F2 版 payload 无此键
+- **渲染语义三端同源**:数据同走 buildChartPayload;配色/高度常量 `CHART_COLORS`/`CHART_HEIGHT` 从 chart-init-script.ts 导出供 web 实现与 ThreeLineChart 图例复用;LightChart.web 的 applySeries 与脚本的 BUILDERS 逐 series 对应(k=fast 色等约定见代码注释);init 脚本刻意 ES5(兼容旧 WebView)
+- **Props 契约**:`LightChartProps.kind` 实现为 4 值超集(内部 lines 模式供 ThreeLineChart 复用),brief 契约的三值调用完全兼容;高度 candles 360 / macd·kdj 200 / lines 260
+- **Metro web 打包实测**:临时在 app/index.tsx import 三组件后 `CI=1 npx expo export -p web` 通过(779 modules,index chunk 211KB 含 lightweight-charts),证明 Metro 平台扩展解析 + ESM 依赖打包无阻,验证后已还原;浏览器/真机冒烟按计划留 F7/F8
+- **测试规模**:35 → 48(+13:chart-init-script 12 + charts-smoke 1);`npx tsc --noEmit` exit 0
