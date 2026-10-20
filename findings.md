@@ -116,3 +116,11 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **端点 oracle 实测**:round_trip_closes(240)+Task 10 PARAMS(ema 5/20、entry_pct 100、total、am_size 40)→ 恰 2 笔成交(LONG 1533 @2023-03-22 / SHORT 1533 @2023-06-21),`strategy.cash − Σnet_pnl = CAPITAL` 精确(期末空仓)→ 断言 `cash[-1] ≈ strategy.cash`(abs 1e-6)通过,与 Task 13 恒等式互证
 - **枚举值勘误**:实测 `Direction.LONG.value == 'Long'`(非 Task 10 记录的 '多',vnpy 4.5.0 实装值);曲线层用枚举直比不受影响,后续任何依赖 `.value` 的代码以 'Long'/'Short' 为准
 - **格式门禁为 `ruff check`**:仓库 23 个既有文件不满足 `ruff format`(含 runner/strategies),格式化非门禁;新文件与现有风格一致
+
+## 指标层(Task 15)
+
+- **brief 手算值与公式契约冲突(契约胜出,已修测试)**:`test_beta_of_perfect_tracker` 原断言 `information_ratio ≈ 0.0`;但完全同步 → rp−rb 恒为 0、std(ddof=1)=0,spec §7 规定 std=0 → None(0/0 无定义)→ 断言改 `is None`,注释留了重新推导
+- **新增 n<3 护栏测试**(brief 缺):eq=[100,101]/bench=[100,99] 按索引前对齐取短者 n=2 → 8 项指标全 None;共 5 个新测试,全量 57 passed(52 基线 + 5)
+- **实现与 brief 差异均为形式性**(数值语义不变):`_NONE_KEYS` 模块常量、eq/bench 显式 `np.asarray`、alpha 走 if 块并 `float()` 包裹(brief 两处条件表达式超 100 列,改局部变量 rp_std/ex_std)、mdd 免 `if len` 卫语句(n≥3 已保证);β/α/夏普/IR/MDD 与独立 numpy 手算交叉验证 1e-12 一致
+- **np.float64 提示**:除 alpha 已包 float 外,`beta = cov/var` 恒为 Python float;若后续 Task 16 传给严格类型校验,注意 numpy 标量(np.float64 是 float 子类,json 序列化安全)
+- **基准曲线**:`benchmark_relative_curve` 首值精确 0.0、capital 按契约保留未用、空 bars → `[]`;格式门禁仍是 `ruff check`(仓库 26 个既有文件不满足 ruff format,新文件随现有风格)
