@@ -37,8 +37,8 @@
 - [x] 用户批准(2026-10-20「批准,自主推进到 goal」,授权免逐节评审)
 
 ### Phase 3:实施计划 — Status: complete
-- [x] Plan 1 后端核心 docs/superpowers/plans/2026-10-20-backend-backtest-core.md(Task 0-19,含 TDD 步骤与完整代码)
-- [ ] Plan 2 前端(M5)——Plan 1 完成后编写
+- [x] Plan 1 后端核心 docs/superpowers/plans/2026-10-20-backend-backtest-core.md(Task 0-19 + 终审修复波,105 测试绿,终审放行)
+- [x] Plan 2 前端 docs/superpowers/plans/2026-10-20-frontend-charts.md(Task F0-F7)
 - [ ] Plan 3 Docker+端到端验收(M6)——Plan 2 完成后编写
 
 ### Phase 4:TDD 实现(切片顺序以实施计划为准)— Status: in_progress
