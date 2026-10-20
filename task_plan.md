@@ -26,14 +26,15 @@
 - [x] vnpy Web 调研(docs/research/vnpy-web-findings.md)——yfinance 坑位清单、^GSPC vs SPY 基准惯例、4.x 生态现状
 - [ ] 汇总深度研究报告 docs/research/2026-10-20-vnpy-deep-research.md
 
-### Phase 1:仓库与规范 — Status: pending
-- [ ] git init + remote origin + 首次提交推送
-- [ ] CLAUDE.md 规范文档(目录结构/命名/提交/测试/文档树约定)
+### Phase 1:仓库与规范 — Status: in_progress
+- [x] git init + remote origin(SSH)+ 首次提交推送(9df9afc)
+- [x] CLAUDE.md 规范文档(目录/命名/提交/测试/文档树约定)
 - [ ] 工程骨架:backend(uv + Python 3.12)+ frontend(Expo)+ docker/ 编排
 
-### Phase 2:设计 spec 与评审 — Status: pending
-- [ ] docs/superpowers/specs/2026-10-20-vnpy-backtest-demo-design.md
-- [ ] spec 自审(占位符/一致性/歧义/范围)+ 用户评审通过
+### Phase 2:设计 spec 与评审 — Status: complete
+- [x] docs/superpowers/specs/2026-10-20-vnpy-backtest-demo-design.md
+- [x] spec 自审修正:TP/SL 必须走 vnpy stop 单(防绕过引擎致曲线失真)、EXPO_PUBLIC_API_BASE、on_trade 校准 sizing 现金
+- [x] 用户批准(2026-10-20「批准,自主推进到 goal」,授权免逐节评审)
 
 ### Phase 3:实施计划 — Status: pending
 - [ ] superpowers:writing-plans 产出实施计划(任务切片、每步 TDD、进度可勾选)
