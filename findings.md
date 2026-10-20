@@ -304,3 +304,12 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **兜底后续项(三选一)**:① expo 导出改 hash 路由;② Electron main.js 内嵌 http 服务托管 dist;③ main.js `will-navigate` 拦截 `file:///<route>` 改 SPA 导航。未在本任务实施(任务时间盒外)。
 - **坑**:上一探针点击 Link 白屏后窗口落 `chrome-error://chromewebdata/`,此时 `location.href = location.href` 无法重载回应用,须 `Page.navigate` 显式导航回 index.html 绝对路径。
 - **沙箱坑(复现 F6 教训)**:Electron 子进程仍会带 ELECTRON_RUN_AS_NODE,必须 `env -u ELECTRON_RUN_AS_NODE` 启动,否则 9222 端口永不监听。
+
+## 前端(Electron dist 修复)
+
+任务:落地 D3 兜底项②(2026-10-20)。状态:**完成,冒烟通过**。记录:
+
+- **修法**:重写 `desktop/main.js` dist 分支——`DESKTOP_URL` 非 http 时,主进程用 node 内置 `http` 起 127.0.0.1 随机端口(`listen(0)`)极简静态服务托管 dist 目录,`win.loadURL("http://127.0.0.1:<port>/")`;服务随 `win.on("closed")` 关闭。即 D3 三选一中的**方案②内嵌 http 服务**,行为等效 nginx 模式,应用代码零改动。
+- **SPA fallback**:非存在文件路径(含目录、防穿越拦截)一律回 `index.html`,对齐 `docker/nginx.conf` 的 `try_files $uri $uri.html $uri/ /index.html`;MIME 表覆盖 html/js/css/json/svg/png/ico/woff/woff2。为什么不能 loadFile:file:// opaque origin 下 expo-router 把站内 `<Link>` 判为外部链接走 `window.location` 整页硬导航 → `file:///history` ERR_FILE_NOT_FOUND(D3 已实测),http 源下走正常 SPA 导航。
+- **冒烟证据**:`--remote-debugging-port=9222` 后台起 dist 模式 → `/json/list` 页面 URL 为 `http://127.0.0.1:51723/`(http 而非 file://);`curl /history` → **200** 且返回 index.html 内容(硬导航目标不再 404),`/result/42`、`/` 同 200;真实 JS 资产 `_expo/static/js/web/history-*.js` → 200 `text/javascript`;`--path-as-is /../../etc/passwd` 穿越 → 返回 index.html(无泄漏);杀 electron 后内嵌端口关闭;`node --check` 通过;`npm test` 109 全绿(无前端代码改动)。
+- **兼容性**:dev 分支(http URL)逻辑不变;`package.json` 的 `desktop:dist` script(`DESKTOP_URL=../frontend/dist/index.html`)不改,指向文件的路径自动走新静态服务分支(文件→取其所在目录为静态根,目录→直接作根)。
