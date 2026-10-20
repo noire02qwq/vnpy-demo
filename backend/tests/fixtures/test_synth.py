@@ -1,6 +1,4 @@
 # tests/fixtures/test_synth.py
-from datetime import datetime
-
 from vnpy.trader.constant import Interval
 
 from tests.fixtures.synth import make_bars, sine_closes, v_shape_closes
