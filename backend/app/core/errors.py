@@ -39,4 +39,5 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def handle_unexpected(_: Request, exc: Exception) -> JSONResponse:
-        return JSONResponse(status_code=500, content={"code": ErrorCode.INTERNAL, "message": str(exc), "detail": None})
+        # 固定文案,不回显 str(exc):防内部实现细节/路径经 500 响应体泄漏
+        return JSONResponse(status_code=500, content={"code": ErrorCode.INTERNAL, "message": "服务器内部错误", "detail": None})

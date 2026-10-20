@@ -44,6 +44,12 @@ class BacktestRequest(BaseModel):
     cost: CostConfig = Field(default_factory=CostConfig)
     warmup_bars: int = Field(default=100, ge=20, le=1000)
 
+    @model_validator(mode="after")
+    def check_date_order(self) -> "BacktestRequest":
+        if not (self.start < self.end):
+            raise ValueError("start 必须早于 end")
+        return self
+
 
 class FetchRequest(BaseModel):
     symbol: str

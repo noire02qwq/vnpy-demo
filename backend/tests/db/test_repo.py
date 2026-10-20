@@ -1,6 +1,6 @@
 import pytest
 
-from app.db.models import RunModel  # noqa: F401
+from app.db.models import RunModel
 from app.db.repo import delete_run, get_run, list_runs, save_run
 from app.db.session import init_session_factory
 
@@ -42,3 +42,17 @@ def test_list_and_delete(session_factory) -> None:
         assert total == 5 and len(items) == 3 and "curves" not in items[0]
         assert delete_run(s, "run0")
         assert not delete_run(s, "nope")
+
+
+def test_list_runs_reads_split_columns(session_factory) -> None:
+    """F7:list_runs 只依赖 request_json + metrics_json 摘要列,不再 json.loads 大 result_json。"""
+    with session_factory() as s:
+        save_run(s, _result(2), "runx")
+        s.commit()
+    with session_factory() as s:
+        row = s.get(RunModel, "runx")
+        assert row.metrics_json and "total_return" in row.metrics_json
+        row.result_json = "corrupted-not-json"  # list_runs 不得依赖 result_json
+        items, total = list_runs(s, page=1, page_size=10)
+        assert total == 1 and items[0]["metrics"]["total_return"] == 0.2
+        assert items[0]["request"]["symbol"] == "AAPL"

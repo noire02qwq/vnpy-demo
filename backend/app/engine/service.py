@@ -22,7 +22,6 @@ from app.core.errors import AppError, ErrorCode
 from app.data.validate import check_symbol
 from app.engine.curves import build_curves
 from app.engine.runner import CostSettings, run_backtest
-from app.metrics.benchmark import benchmark_relative_curve
 from app.metrics.risk import compute_risk_metrics
 from app.strategies.registry import STRATEGY_REGISTRY
 from app.strategies.signals import signal_series
@@ -67,6 +66,53 @@ def _load_symbol_bars(symbol: str, start: str, end: str, warmup: int) -> list[Ba
     return to_bar_data(df, symbol)
 
 
+def _assemble_params(meta: dict, strategy_cfg: dict, warmup: int) -> dict[str, Any]:
+    """params 装配(模块级纯函数):signal_kind 置首(可被用户 params 覆盖,保持该顺序语义)
+    ← 注册表 defaults ← 用户 params ← 契约键 entry_pct/entry_basis/am_size(warmup 胜出)。
+
+    相对策略 parameters 的多余键(turtle/dca 收到 entry_pct 等)被 ``CtaTemplate.update_setting``
+    静默忽略(1.4.1 template.py:44-50),故不做键集过滤 —— 见模块 docstring。
+    """
+    params: dict[str, Any] = {}
+    if meta["signal"] is not None:
+        params["signal_kind"] = meta["signal"]
+    params.update(meta["defaults"])
+    params.update(strategy_cfg.get("params") or {})
+    params["entry_pct"] = float(strategy_cfg.get("entry_pct") or 100.0)
+    params["entry_basis"] = strategy_cfg.get("entry_basis") or "total"
+    params["am_size"] = warmup
+    return params
+
+
+def _aligned_close_series(bench_bars: list[BarData], dates: list[str]) -> list[float]:
+    """基准 close 按主曲线日期轴对齐:缺失日取前值(ffill),开头缺失回填首个可用值。
+
+    返回与 dates 等长的 close 序列(供风控层日收益计算);基准为空 → []。
+    """
+    if not bench_bars:
+        return []
+    close_by_date = {b.datetime.strftime("%Y-%m-%d"): float(b.close_price) for b in bench_bars}
+    filled: list[float | None] = []
+    last: float | None = None
+    for d in dates:
+        if d in close_by_date:
+            last = close_by_date[d]
+        filled.append(last)
+    first = next((v for v in filled if v is not None), None)
+    if first is None:
+        return []
+    return [v if v is not None else first for v in filled]
+
+
+def _align_benchmark(bench_bars: list[BarData], dates: list[str]) -> list[float]:
+    """基准累计收益率 %(与 dates 等长):首日相对基准首日 → 首值恒 0.0(坐标原点语义不变)。"""
+    closes = _aligned_close_series(bench_bars, dates)
+    if not closes:
+        return []
+    base = closes[0]
+    return [(c / base - 1.0) * 100.0 for c in closes]
+
+
 def build_candles(bars: list[BarData], signal: str | None, params: dict[str, Any]) -> dict[str, Any]:
     """K 线 + 信号叠加:ema→overlays 双线,macd/kdj→sub 副图,turtle/dca 两者皆空。"""
     out: dict[str, Any] = {
@@ -100,26 +146,26 @@ def execute_backtest(request: dict[str, Any], *, benchmark_fetcher: Callable | N
     cost = CostSettings(
         rate=float(cost_cfg.get("commission_rate", get_settings().default_commission_rate)),
         slippage=float(cost_cfg.get("slippage", get_settings().default_slippage)),
-        fixed=float(cost_cfg.get("commission_fixed", get_settings().default_commission_fixed)),
+        # spec §8 移除 commission_fixed(CostConfig extra="forbid" 拒未知键);1.4.1 引擎无 fixed,rate-only
+        fixed=0.0,
     )
-    params = {**meta["defaults"], **(request["strategy"].get("params") or {}),
-              "entry_pct": float(request["strategy"].get("entry_pct") or 100.0),
-              "entry_basis": request["strategy"].get("entry_basis") or "total",
-              "am_size": warmup}
+    params = _assemble_params(meta, request["strategy"], warmup)
     run = run_backtest(bars, meta["cls"], params, capital, cost, symbol=request["symbol"])
     curves = build_curves(run, bars, capital)
 
     fetch = benchmark_fetcher or (lambda sym, a, b: _load_symbol_bars(sym, a, b, warmup))
     bench_bars = fetch(request.get("benchmark_symbol") or get_settings().default_benchmark,
                        request["start"], request["end"])
+    # 基准按主曲线日期轴对齐后再喂风控层(等长序列,beta/alpha/IR 才同源)
+    aligned_bench_close = _aligned_close_series(bench_bars, curves.dates)
     s: Settings = get_settings()
-    risk = compute_risk_metrics(curves.equity, [b.close_price for b in bench_bars],
+    risk = compute_risk_metrics(curves.equity, aligned_bench_close,
                                 annual_days=s.annualization_days, risk_free_rate=s.risk_free_rate)
     curves_out = {
         "dates": curves.dates,
         "equity": curves.equity,
         "position_value": curves.position_value,
-        "benchmark": benchmark_relative_curve(bench_bars, capital),
+        "benchmark": _align_benchmark(bench_bars, curves.dates),
     }
     candles = build_candles(bars, meta["signal"], params)
 

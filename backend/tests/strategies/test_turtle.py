@@ -87,3 +87,29 @@ def test_cash_conservation() -> None:
     st = run.engine.strategy
     expected = CAPITAL + run.stats["total_net_pnl"] - abs(st.pos) * bars[-1].close_price
     assert st.cash == pytest.approx(expected, abs=1e-6)
+
+
+def test_2n_stop_pierced_by_huge_down_bar() -> None:
+    """2N 总止损路径:巨阴 low 击穿 entry−2N、close 仍高于 10 日低点(避开通道离场),
+    同 bar stop 段撮合(on_trade 挂单后 stop 快照继续遍历,backtesting.py:649-656),
+    成交价 = min(stop_price, bar.open) = stop_price 本身(stop 语义 backtesting.py:795-798)。
+
+    数据:51 横盘@100 → 5 根回调@97(压低 10 日低点与 ATR)→ 4 根回 100 → 102(突破入场)
+    → 98(巨阴:o=102、low=97.02 ≤ stop,close=98 > 回调段 10 日低点)。
+    """
+    closes = [100.0] * 51 + [97.0] * 5 + [100.0] * 4 + [102.0, 98.0]
+    bars = make_bars(closes)
+    run = run_backtest(bars, TurtleStrategy, dict(PARAMS), CAPITAL, CostSettings())
+    trades = run.engine.get_all_trades()
+    assert len(trades) == 2, "应恰为一买一 stop 卖"
+    buy, sell = trades
+    assert buy.direction == Direction.LONG and sell.direction == Direction.SHORT
+    # 入场决策 bar = idx 60(close 102 > 20 日高 101);stop 用该 bar ATR(含回调段 TR)手算
+    atr = wilder_atr_at(bars, PARAMS["atr_days"], 60)
+    stop_price = round(102.0 - 2.0 * atr, 2)  # stop_n 类默认 2.0(PARAMS 未覆盖)
+    assert buy.price == pytest.approx(bars[61].open_price)
+    assert bars[61].low_price <= stop_price, "巨阴 low 必须击穿 entry-2N"
+    assert bars[61].close_price > 96.03, "close 须高于 10 日低点以避开通道离场"
+    assert sell.price == pytest.approx(min(stop_price, bars[61].open_price))
+    assert sell.price == pytest.approx(stop_price)  # stop < open → 成交价即 stop 本身
+    assert run.engine.strategy.pos == 0

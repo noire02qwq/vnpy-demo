@@ -1,6 +1,7 @@
 # app/main.py
-"""FastAPI 装配:路由挂载 + 统一错误处理 + SQLite 会话工厂(测试 monkeypatch 本模块函数注入)。"""
+"""FastAPI 装配:路由挂载 + CORS + 统一错误处理 + SQLite 会话工厂(测试 monkeypatch 本模块函数注入)。"""
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.backtests import router as backtests_router
@@ -11,6 +12,14 @@ from app.core.errors import install_error_handlers
 from app.db.session import init_session_factory
 
 app = FastAPI(title="vn-demo backend", version="0.1.0")
+
+# demo 前端(默认 http://localhost:8081)跨域访问;白名单经 VNDEMO_CORS_ORIGINS 收紧
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_settings().cors_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def get_session_factory() -> sessionmaker[Session]:

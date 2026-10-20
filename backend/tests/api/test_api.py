@@ -65,6 +65,38 @@ def test_cost_unknown_key_400(client) -> None:
     assert r.json()["code"] == "BAD_PARAMS"
 
 
+def test_start_after_end_400(client) -> None:
+    # start>=end 前置 400(model_validator),不再透传 service 层
+    r = client.post("/api/v1/backtests", json=dict(BODY, start="2023-12-31", end="2023-01-02"))
+    assert r.status_code == 400
+    assert r.json()["code"] == "BAD_PARAMS"
+
+
+def test_start_equals_end_400(client) -> None:
+    r = client.post("/api/v1/backtests", json=dict(BODY, start="2023-01-02", end="2023-01-02"))
+    assert r.status_code == 400
+    assert r.json()["code"] == "BAD_PARAMS"
+
+
+def test_cors_healthz(client) -> None:
+    """I1:CORS 中间件挂载——跨域 Origin 请求回 allow-origin 头。"""
+    r = client.get("/healthz", headers={"Origin": "http://localhost:8081"})
+    assert r.status_code == 200
+    assert "access-control-allow-origin" in r.headers
+
+
+def test_meta_schema_enum_and_integer(client) -> None:
+    """I5:meta schema——str 键带 enum、int 值为 integer、float 为 number。"""
+    r = client.get("/api/v1/meta/strategies")
+    by_type = {s["type"]: s for s in r.json()["strategies"]}
+    assert by_type["dca"]["schema"]["interval"] == {"type": "string", "enum": ["weekly", "biweekly", "monthly"]}
+    assert by_type["turtle"]["schema"]["entry_days"] == {"type": "integer", "minimum": 1}
+    assert by_type["turtle"]["schema"]["risk_pct"] == {"type": "number"}
+    assert by_type["ema_tpsl"]["schema"]["entry_basis"] == {"type": "string", "enum": ["total", "cash"]}
+    assert by_type["ema_tpsl"]["schema"]["entry_pct"] == {"type": "number"}
+    assert by_type["ema_tpsl"]["schema"]["am_size"] == {"type": "integer", "minimum": 1}
+
+
 def test_meta_strategies(client) -> None:
     r = client.get("/api/v1/meta/strategies")
     types = {s["type"] for s in r.json()["strategies"]}

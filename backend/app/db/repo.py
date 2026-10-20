@@ -17,8 +17,12 @@ def save_run(session: Session, result: Any, run_id: str) -> None:
         "candles": result.candles,
         "trades": result.trades,
     }
-    session.add(RunModel(id=run_id, request_json=json.dumps(result.request, ensure_ascii=False),
-                         result_json=json.dumps(full, ensure_ascii=False, default=str)))
+    session.add(RunModel(
+        id=run_id,
+        request_json=json.dumps(result.request, ensure_ascii=False),
+        metrics_json=json.dumps(result.metrics, ensure_ascii=False, default=str),
+        result_json=json.dumps(full, ensure_ascii=False, default=str),
+    ))
 
 
 def _to_full(row: RunModel) -> dict:
@@ -37,9 +41,9 @@ def list_runs(session: Session, page: int, page_size: int) -> tuple[list[dict], 
     items = []
     for row in rows:
         req = json.loads(row.request_json)
-        full = _to_full(row)
+        metrics = json.loads(row.metrics_json)  # 摘要只读拆出的 metrics_json 列,不再反序列化大 result_json
         items.append({"id": row.id, "created_at": row.created_at.isoformat(),
-                      "request": req, "metrics": full["metrics"]})
+                      "request": req, "metrics": metrics})
     return items, total
 
 

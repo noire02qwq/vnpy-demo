@@ -56,3 +56,42 @@ def test_none_download_maps_to_empty(monkeypatch: pytest.MonkeyPatch) -> None:
         fetch_daily("AAPL", d0, d1)
     assert e.value.code == ErrorCode.NO_DATA
     assert e.value.status == 404
+
+
+def _raiser(exc: Exception):
+    def _f(*a, **k):
+        raise exc
+
+    return _f
+
+
+def test_rate_limit_message_maps_to_429(monkeypatch: pytest.MonkeyPatch) -> None:
+    """I2:限流异常(消息匹配)→ AppError(RATE_LIMITED, 429),不再裸 500。"""
+    import yfinance as yf
+
+    monkeypatch.setattr(yf, "download", _raiser(Exception("YFRateLimitError: too many requests")))
+    with pytest.raises(AppError) as e:
+        fetch_daily("AAPL", date(2023, 1, 2), date(2023, 1, 31))
+    assert e.value.code == ErrorCode.RATE_LIMITED
+    assert e.value.status == 429
+
+
+def test_rate_limit_class_maps_to_429(monkeypatch: pytest.MonkeyPatch) -> None:
+    """yfinance 1.7.0 专用异常类 yfinance.exceptions.YFRateLimitError(类名匹配)。"""
+    import yfinance as yf
+    from yfinance.exceptions import YFRateLimitError
+
+    monkeypatch.setattr(yf, "download", _raiser(YFRateLimitError()))
+    with pytest.raises(AppError) as e:
+        fetch_daily("AAPL", date(2023, 1, 2), date(2023, 1, 31))
+    assert e.value.code == ErrorCode.RATE_LIMITED
+    assert e.value.status == 429
+
+
+def test_other_download_errors_reraise(monkeypatch: pytest.MonkeyPatch) -> None:
+    """非限流异常原样 re-raise,不得吞掉改变语义。"""
+    import yfinance as yf
+
+    monkeypatch.setattr(yf, "download", _raiser(ValueError("boom")))
+    with pytest.raises(ValueError, match="boom"):
+        fetch_daily("AAPL", date(2023, 1, 2), date(2023, 1, 31))
