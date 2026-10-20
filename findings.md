@@ -124,3 +124,13 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **实现与 brief 差异均为形式性**(数值语义不变):`_NONE_KEYS` 模块常量、eq/bench 显式 `np.asarray`、alpha 走 if 块并 `float()` 包裹(brief 两处条件表达式超 100 列,改局部变量 rp_std/ex_std)、mdd 免 `if len` 卫语句(n≥3 已保证);β/α/夏普/IR/MDD 与独立 numpy 手算交叉验证 1e-12 一致
 - **np.float64 提示**:除 alpha 已包 float 外,`beta = cov/var` 恒为 Python float;若后续 Task 16 传给严格类型校验,注意 numpy 标量(np.float64 是 float 子类,json 序列化安全)
 - **基准曲线**:`benchmark_relative_curve` 首值精确 0.0、capital 按契约保留未用、空 bars → `[]`;格式门禁仍是 `ruff check`(仓库 26 个既有文件不满足 ruff format,新文件随现有风格)
+
+## 结果装配(Task 16)
+
+- **update_setting 行为证据(1.4.1 template.py:44-50,决定免过滤)**:`CtaTemplate.update_setting` 遍历**策略类声明的 `parameters` 列表**,仅对 `name in setting` 的键 setattr → setting 中的多余键(entry_pct/entry_basis 之于 turtle、fast_period 之于 dca)被**静默忽略、不抛异常**(`__init__` 末尾同样走 update_setting,:47)→ 装配无需按 defaults 键集过滤 `strategy.params`,8 形态共用统一超集参数安全
+- **vnpy stats 实测类型(Task 16 转换依据)**:`start_date/end_date` 为 `datetime.date`(非 str/Timestamp,df.index[0] 赋值后实测)→ `strftime("%Y-%m-%d")`;`total_days/total_trade_count` 为 np.int64 → `int()`;`total_commission/total_turnover/max_drawdown/return_drawdown_ratio` 为 np.float64 → `float()`(max_drawdown 为**负美元额**,-12478.77 实测;风控层 max_drawdown 为正小数被 stats 合并覆盖,契约如此)
+- **brief 代码 bug(沿 Task 14 已证):`t.time.strftime` 必抛 AttributeError**(TradeData 无 `.time`)→ 改 `t.datetime.strftime("%Y-%m-%d")`;brief 的 `Offset` 导入未用已删
+- **校验决策**:仅 BAD_PARAMS 校验 `strategy.type` 存在;tp/sl 缺省由 registry defaults 补齐(tpsl 默认 10/5),不做显式 ≤0 拒绝(缺 key ≠ 非法,决策留档)
+- **entry_basis 语义注意**:装配 `"entry_basis": request 值 or "total"` 按契约统一——API 请求省略 entry_basis 时会覆盖 tpsl registry 默认 "cash"(Task 18 API 层若显式传参则无影响,已留意)
+- **compute_risk_metrics 传参**:显式传 `annual_days=Settings.annualization_days` + `risk_free_rate=Settings.risk_free_rate`(settings 有 annualization_days=250,与默认一致);全产物 json.dumps round-trip 实测通过
+- **测试**:brief Step 1 + 追加 macd sub(dif/dea/hist)与 turtle overlays/sub 双空,共 3 个新测试;全量 60 passed(57 基线 + 3),`svc._load_symbol_bars` monkeypatch try/finally 还原
