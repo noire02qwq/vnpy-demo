@@ -1,0 +1,33 @@
+# vn-demo 双服务编排:backend(FastAPI + vnpy 回测)+ frontend(nginx 托管 expo 静态导出)。
+# 用法见同目录 README.md;数据卷说明:backend 首次挂载必须是空卷(create_all 不迁移)。
+name: vndemo
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    ports: ["8000:8000"]
+    volumes:
+      # SQLite(backtest.db)持久化;挂载点与容器内 VNDEMO_DATA_DIR 一致(D0)
+      - backend-data:/app/backend/data
+    healthcheck:
+      # 用镜像内自带的 python urllib 探活,免装 curl(D0 决策)
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        # 构建期内联进前端 bundle(运行时改无效);换值会使构建缓存失效全量重建
+        EXPO_PUBLIC_API_BASE: http://localhost:8000
+    ports: ["8080:8080"]
+    depends_on:
+      backend:
+        condition: service_healthy
+volumes:
+  backend-data:

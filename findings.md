@@ -281,3 +281,14 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **nginx 配置细节**:静态段 `location /_expo/static/` 加 `immutable` 长缓存(文件名带内容哈希)+ `try_files $uri =404`(资源缺失就该 404,不回退 html);html 入口走默认无缓存头,便于换版。
 - **`npm ci --no-audit --no-fund`**:devDependencies 全量装(electron postinstall ~100MB 下载在 build 阶段,不进最终镜像);未用 `--omit=dev`(typescript 等在 dev,expo export 的 Metro 链路对缺依赖行为不可控,稳妥优先)。
 - **冒烟证据**:`docker run -d -p 8080:8080` → `/`=200(含 root div 的 index.html)、`/history`=200、`/result/42`=200;bundle 内嵌 API base 已验证;测试容器与 marker 镜像均已清理。
+
+## Docker(D2)
+
+任务:compose 编排与文档(2026-10-20)。状态:完成。记录:
+
+- **compose 实测**:`up -d --build` 全程 **18.3s**(D0/D1 已建镜像,层缓存全命中,仅 provenance/元数据 + 容器创建启动);首见 `Container vndemo-backend-1 Waiting → Healthy → frontend Starting`,depends_on service_healthy 生效。两服务 Up、backend (healthy);`/api/v1/meta/strategies` 8 形态;前端 `/`、`/history` 均 200。
+- **独立启停 + 隐含行为**:`stop frontend` 后 backend 仍 Up(healthy)、healthz 正常;`start frontend` 时 compose **重新等待 backend healthy 才启动前端**——depends_on: service_healthy 不仅管首次 up,也管单独 start,属合理语义。
+- **真实回测(compose 环境)**:POST /api/v1/backtests(AAPL 2023-01-01~2025-12-31,ema_cross 5/20)200,耗时 **3.3s**(容器内 yfinance 真实联网拉数,数据卷首挂为空无缓存);total_return **0.0846**,metrics **16** 键,trades **34** 笔,净值曲线 752 点;结果 GET 回放 200。
+- **数据卷落位证据**:容器内 `backtest.db`(172KB)+ `cache/` 均在挂载点 `/app/backend/data`(命名卷 `vndemo_backend-data`);`down` 后卷保留(`docker volume ls` 可见)。
+- **对计划起点的两处微调(均已写进 compose 注释与 docker/README.md)**:① 顶层 `name: vndemo`——目录名 docker 作默认项目名太泛(容器会是 docker-backend-1、卷 docker_backend-data,与他项目易撞),定名后为 vndemo-backend-1 / vndemo_backend-data;② healthcheck 加 `start_period: 15s`——vnpy import 链路冷启动可能超过首个 30s 探测间隔,加宽限期避免启动期误判 unhealthy。其余(两服务/healthz python urllib/卷/build arg 默认值)与计划一致。
+- **README(docker/README.md)覆盖**:构建/启动/停止/独立启停/清理(down vs down -v)、端口表、EXPO_PUBLIC_API_BASE 构建期内联说明(本机浏览器场景用默认 localhost:8000;跨机部署需改宿主 IP 重建前端镜像,ARG 失效全量重建 ~60s)、数据卷红线(首挂必须空卷:create_all 不迁移,旧 schema db 进卷接口 500,`down -v` 删卷即愈、台账随之清空)、镜像大小参考(backend ~1.8GB 因 vnpy 硬依赖 Qt/PySide6;frontend ~25MB)、ta-lib wheel 路线一句话记录。
