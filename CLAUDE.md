@@ -92,4 +92,5 @@ docker compose up backend frontend
 ## 文档规范
 
 - task_plan.md:阶段状态与决策表实时更新;findings.md:任何新发现立即落盘;progress.md:每会话追加
+- **README.md:项目介绍与「当前状态」里程碑表,每个里程碑(或每完成一个任务切片)完成即更新,实时推送**
 - commit 前置检查:相关文档已同步 → 测试全绿 → 提交推送
