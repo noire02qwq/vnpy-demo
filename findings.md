@@ -171,3 +171,13 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **expo install --dev 偶发失败**:`npx expo install --dev jest jest-expo @testing-library/react-native @types/jest` 前三个成功,@testing-library/react-native 一步 npm spawn 非零退出;直接 `npm install --save-dev @testing-library/react-native` 即成功(transient)。最终版本:@testing-library/react-native ^14.1.0 / jest ~30.5.2 / jest-expo ~58.0.11 / @types/jest 30.0.0
 - **依赖集未裁剪**:模板依赖(SDK 对齐集)全部保留,未用到的 demo 依赖(reanimated/worklets/@expo/ui 等)不影响产物——export 只打包被 import 的模块;后续任务如需可再裁
 - **忽略栈验证**:`git check-ignore` 证实 frontend/dist、node_modules、.expo、expo-env.d.ts 均被忽略(模板 .gitignore 与根 .gitignore 叠加无冲突);frontend/src/ 因已有 api/schema.json 天然非空,无需 .gitkeep
+
+## 前端(F1)
+
+- **BacktestResult 补 id 字段**:brief Interfaces 行未列 id,但后端 POST 响应 `{"id": run_id, **5字段}`、GET /backtests/{id}(repo get_run)均在响应内带 id → 按契约补上;确认无 stats_raw/created_at
+- **candles.overlays/sub 及内层键全可选(Record 风格)**:brief Interfaces 行 `sub:{...}` 写成必填,父任务上下文明确"sub 可选、overlays 同理"→ 按 `overlays?`/`sub?` + 内层 `macd?/kdj?/ema_fast?/ema_slow?` 可选化(后端 turtle/dca 装配空对象,可选化对消费端更稳,运行时两者兼容)
+- **Trade 字段实测补全**:brief 只给类型名未给字段 → 按后端 trades 装配(service.py)定为 `{time: string(YYYY-MM-DD), direction: "buy"|"sell", price: number, volume: number}`
+- **非 2xx 文案优先级**:响应体 `message` 优先(测试②"message 来自响应"),缺失时回退 `errorMessage(code)` 映射,非 JSON 错误体(网关页)再兜底"请求失败"(测试覆盖第三分支);errorMessage 纯函数语义严格按 brief:已知码取映射,未知码/undefined 回退 `fallback ?? "请求失败"`
+- **`global` 未定义(TS2584)**:`types:["jest"]` 不带 node 全局(tsc 报错信息:改用标准 `globalThis`)→ 测试 mock 用 `globalThis.fetch`,不动 tsconfig(F0 的 types 配置保持)
+- **StrategyMeta.kind/mode 定为 string**:meta 端点对这两字段无枚举契约(registry 值如 "signal"/"long" 未在 openapi 收敛),不臆造联合类型;signal 按 SignalKind("macd"|"kdj"|"ema")| null 收紧
+- **测试规模**:brief Step 1 的 4 组全实现 + 追加 fetchData/listRuns 查询参数/getRun/getStrategies 解包/非 JSON 错误体 5 项,参数化展开后 17 passed(含 smoke 1);`npx tsc --noEmit` exit 0
