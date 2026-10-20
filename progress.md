@@ -13,3 +13,7 @@
 - [x] 深度研究报告汇总完成(12 章,含适配结论与六项落地清单)
 - [x] Plan 1(后端 M1-M4)完成:Task 0-19,TDD 步骤+完整代码+内省自适应规则
 - [ ] 执行 Plan 1(subagent-driven)→ 写 Plan 2/3 → 前端 → Docker → 验收
+
+## 会话 2026-10-20(Plan 1 执行,M1 数据层完成)
+- Task 0-6 全部通过评审:骨架(uv+vnpy4.5.0+ctastrategy1.4.1)、core 配置/错误、合成夹具、校验硬闸门(NaN/负 volume 整集拒绝)、BarData 转换(pandas3 适配)、yf1.7.0 客户端(None 防护)、下载日戳 parquet 缓存(pyarrow)
+- 测试 25 passed;ruff clean;每任务实时 commit+push

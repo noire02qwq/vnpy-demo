@@ -42,7 +42,7 @@
 - [ ] Plan 3 Docker+端到端验收(M6)——Plan 2 完成后编写
 
 ### Phase 4:TDD 实现(切片顺序以实施计划为准)— Status: in_progress
-- [ ] 数据层:yfinance → vnpy BarData(DAILY)转换 + 本地缓存 + 测试 fixture
+- [x] 数据层:yfinance → vnpy BarData(DAILY)转换 + 本地缓存 + 测试 fixture(Task 2-6,25 测试绿)
 - [ ] 回测引擎封装:无 GUI 驱动、资金/持仓查询、equity 与持仓资金曲线导出
 - [ ] 策略:MACD / KDJ / 双EMA 金死叉 ×(金死叉对卖 | 金叉买+固定止盈止损)+ 海龟 + 定投
 - [ ] 指标:总收益/年化/Alpha/MDD/波动率/Beta/夏普/信息比率 + ^GSPC 基准对比曲线(初始归零)
