@@ -206,3 +206,18 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **Props 契约**:`LightChartProps.kind` 实现为 4 值超集(内部 lines 模式供 ThreeLineChart 复用),brief 契约的三值调用完全兼容;高度 candles 360 / macd·kdj 200 / lines 260
 - **Metro web 打包实测**:临时在 app/index.tsx import 三组件后 `CI=1 npx expo export -p web` 通过(779 modules,index chunk 211KB 含 lightweight-charts),证明 Metro 平台扩展解析 + ESM 依赖打包无阻,验证后已还原;浏览器/真机冒烟按计划留 F7/F8
 - **测试规模**:35 → 48(+13:chart-init-script 12 + charts-smoke 1);`npx tsc --noEmit` exit 0
+
+## 前端(F5)
+
+任务:配置页 + 结果页 + 历史页三页集成(2026-10-20)。状态:完成,无阻断性偏差。决策与口径记录如下:
+
+- **jest.mock 工厂必须自包含(TDZ 实锤)**:babel-jest 把 `jest.mock` 提升到模块 const 声明之前,而测试文件自身的 `import` 求值就会触发被 mock 模块的工厂执行——工厂内直接引用外部 `const mockX = jest.fn()` 必然撞 TDZ(实测症状:`_client.getRun is not a function`,mock 模块半残)。定式:mock 函数在工厂内 `jest.fn()` 创建,import 求值后经 `jest.mocked(client.getRun)` 取回句柄;expo-router 工厂同法(router 对象闭包持有,`useRouter()` 每次返回同一实例,测试侧 `useRouter().push` 拿到稳定 mock)。
+- **expo-router mock 做法(测试可复用)**:`Link` 以 `children ?? null` 直渲(类型注解编译期擦除,工厂无运行时越界引用)、`useRouter` 返回稳定 `{push, back}`、`useLocalSearchParams` 固定返回 `{id: "run-1"}`;无需 requireActual,无需 jest-expo 真路由环境。`app/result/[id]` 方括号路径 jest 解析无碍。
+- **StrategyForm 挂载时机(Minor 3 的绕开方案)**:配置页以 `loaded` 门控——getStrategies 成功前渲染「加载策略元数据…」,就绪后才首次挂载 StrategyForm,组件内部 params 不随异步 metas 重置的问题从根上不触发(不改组件)。
+- **加载失败 UX 补充(契约外微增)**:契约只要求失败时 Alert;但仅 Alert 会让页面永久停留「加载策略元数据…」误导用户 → 配置页失败补「策略元数据加载失败」文案,结果页失败补「回测结果加载失败」+「返回」按钮(router.back),历史页 load 失败仅 Alert 并保留已有列表。
+- **formatMetric 未入库键兜底**:结果页 metrics 含 start_date/end_date 等 METRIC_LABELS 之外的键 → MetricCards 把它们追加在 12 个契约键之后、以键名兜底标签、值走字符串原样分支(顺带让结果页显示回测起止日期);"其余 number → toFixed(3)" 按契约字面执行,整数计数因此显示 "12.000"/"252.000"。
+- **副图渲染按存在性**:`candles.sub?.macd !== undefined →「MACD」段`、`sub?.kdj →「KDJ」段`(ema 形态无副图,自然跳过);失败分支不渲染任何图表区块(测试断言)。
+- **删除交互口径**:行内「删除」按钮(不做长按),deleteRun 成功后整表重拉(listRuns 复调)而非乐观删行;删除期间禁用按钮防连点。历史页固定 listRuns(1, 20),分页交互留后续。
+- **RNTL v14 异步纪律(F4 教训复现并遵守)**:`await render(...)` / `await fireEvent.*` 全覆盖;pending promise 构造加载态(永不 resolve 的 mock)使「加载中」分支确定性可测,避免竞态。
+- **web 导出冒烟**:`CI=1 npx expo export -p web` 三页全过(静态路由 /、/history、/result/[id]、/_sitemap、/+not-found 各 22KB),typed routes 未生成 .expo/types 时 Href 回退 `string | HrefObject`,`href="/history"` 与模板串 `router.push(\`/result/${id}\`)` 均 tsc 直过。
+- **测试规模**:82 → 102(+20:formatMetric 6 / METRIC_LABELS 1 / MetricCards 1 / 配置页 4 / 结果页 4 / 历史页 4);suites 6 → 7;`npx tsc --noEmit` exit 0,零 any。
