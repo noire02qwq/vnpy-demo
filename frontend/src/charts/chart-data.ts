@@ -110,7 +110,7 @@ export function toHistogramMacd(
 
 /**
  * 打包图表数据包:candles + 可选 ema/macd/kdj + 三线对比序列 + 时间轴。
- * 三线用 curves 的 equity/position_value/benchmark(累计收益率 %),
+ * 三线用 curves 的 equity/position_value(绝对资金额)与 benchmark(累计收益率 %),
  * 字段名 lines.equity/lines.position/lines.benchmark;times 取 candles.dates。
  * 形态缺省的键(overlays/sub 不存在)不出现在对象里,JSON 序列化后消失。
  */
@@ -141,7 +141,7 @@ const CDN_SCRIPT_TAG =
 /**
  * 生成 WebView 注入用完整 HTML:CDN 引入 lightweight-charts 5.2.1 +
  * `const PAYLOAD = <json>;` + 初始化占位符。
- * JSON 里的 `<` 全部转义为 `<`,防 `</script>` 提前闭合标签逃逸。
+ * JSON 里的 `<` 全部转义为 `\\u003c`,防 `</script>` 提前闭合标签逃逸。
  */
 export function buildChartHtml(payload: object): string {
   const json = JSON.stringify(payload).replace(/</g, "\\u003c");
