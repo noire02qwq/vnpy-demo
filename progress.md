@@ -9,5 +9,7 @@
 - [x] vnpy 代码级尽调完成:无 GUI 可行、Interval.DAILY+history_data 直注、28 统计键无 alpha/beta 需自算、次日开盘撮合、现金策略自管、无 yahoo addon、ta-lib 硬依赖
 - [x] Web 调研完成:yfinance 坑位(auto_adjust 默认变值/end+1 补天/end 独占/限流/复权回溯→缓存带日期戳)、^GSPC vs SPY、官方支持无 GUI 回测
 - [x] git 完成:身份 noire02qwq(仓库级)、SSH 远程、首推 9df9afc
-- [x] CLAUDE.md 规范 + 设计 spec 落盘(自审修正 3 处:TP/SL 走 vnpy stop 单、EXPO_PUBLIC_API_BASE、on_trade 校准现金);用户批准自主推进
-- [ ] 汇总深度研究报告(后台代理)→ writing-plans → TDD 实现
+- [x] CLAUDE.md 规范 + 设计 spec 落盘(自审修正 6 处:TP/SL 撮合机制、slippage=每股绝对值 0.01、暖机不预置区间外数据、股数按决策收盘价折算等);用户批准自主推进
+- [x] 深度研究报告汇总完成(12 章,含适配结论与六项落地清单)
+- [x] Plan 1(后端 M1-M4)完成:Task 0-19,TDD 步骤+完整代码+内省自适应规则
+- [ ] 执行 Plan 1(subagent-driven)→ 写 Plan 2/3 → 前端 → Docker → 验收

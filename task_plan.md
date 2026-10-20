@@ -18,13 +18,13 @@
 
 ## 阶段
 
-### Phase 0:深度研究与规划基线 — Status: in_progress
+### Phase 0:深度研究与规划基线 — Status: complete
 - [x] 探索项目上下文(harness-hub Python 3.12;远端空仓库;vnpy 4.5.0 基线)
 - [x] 澄清 6 个关键问题(平台/信号/成本/海龟/定投/持久化)
 - [x] 方案比选与用户确认(方案 A)
 - [x] vnpy 代码级尽调(docs/research/vnpy-code-findings.md)——无 GUI 可行、DAILY 支持、history_data 直注、现金自管
 - [x] vnpy Web 调研(docs/research/vnpy-web-findings.md)——yfinance 坑位清单、^GSPC vs SPY 基准惯例、4.x 生态现状
-- [ ] 汇总深度研究报告 docs/research/2026-10-20-vnpy-deep-research.md
+- [x] 汇总深度研究报告 docs/research/2026-10-20-vnpy-deep-research.md(12 章;最高风险=数据静默失效,已设计校验硬闸门)
 
 ### Phase 1:仓库与规范 — Status: in_progress
 - [x] git init + remote origin(SSH)+ 首次提交推送(9df9afc)
@@ -36,10 +36,12 @@
 - [x] spec 自审修正:TP/SL 必须走 vnpy stop 单(防绕过引擎致曲线失真)、EXPO_PUBLIC_API_BASE、on_trade 校准 sizing 现金
 - [x] 用户批准(2026-10-20「批准,自主推进到 goal」,授权免逐节评审)
 
-### Phase 3:实施计划 — Status: pending
-- [ ] superpowers:writing-plans 产出实施计划(任务切片、每步 TDD、进度可勾选)
+### Phase 3:实施计划 — Status: complete
+- [x] Plan 1 后端核心 docs/superpowers/plans/2026-10-20-backend-backtest-core.md(Task 0-19,含 TDD 步骤与完整代码)
+- [ ] Plan 2 前端(M5)——Plan 1 完成后编写
+- [ ] Plan 3 Docker+端到端验收(M6)——Plan 2 完成后编写
 
-### Phase 4:TDD 实现(切片顺序以实施计划为准)— Status: pending
+### Phase 4:TDD 实现(切片顺序以实施计划为准)— Status: in_progress
 - [ ] 数据层:yfinance → vnpy BarData(DAILY)转换 + 本地缓存 + 测试 fixture
 - [ ] 回测引擎封装:无 GUI 驱动、资金/持仓查询、equity 与持仓资金曲线导出
 - [ ] 策略:MACD / KDJ / 双EMA 金死叉 ×(金死叉对卖 | 金叉买+固定止盈止损)+ 海龟 + 定投

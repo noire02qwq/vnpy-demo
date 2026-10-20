@@ -29,7 +29,7 @@
 | D2 | FastAPI 程序化驱动 `vnpy_ctastrategy.backtesting.BacktestingEngine`(无 GUI、无 EventEngine/MainEngine/Gateway) |
 | D3 | Expo 一套代码覆盖 iOS+Android+Web;桌面 = Electron 加载 web build;图表 TradingView Lightweight Charts |
 | D4 | 信号源三选一(MACD/KDJ/双指定 EMA);EMA 快慢周期用户指定 |
-| D5 | 默认成本:佣金率 0.1%/笔、滑点 0.05%;佣金率/固定佣金/滑点全部可配 |
+| D5 | 默认成本:佣金率 0.1%/笔 + 滑点 0.01 美元/股(vnpy slippage 语义为**每股绝对值**,非比率);佣金率/固定佣金/滑点全部可配 |
 | D6 | 海龟 = 经典 ATR 单位制,不受百分比规则约束;百分比规则仅适用于信号形态 |
 | D7 | 定投 = 固定金额 + 间隔(每周/每两周/每月首个交易日),持有到期 |
 | D8 | 回测同步返回 + SQLite 落库可查历史 |
@@ -96,19 +96,19 @@ flowchart LR
 
 ### 5.2 仓位引擎(sizing.py)
 - 策略自管现金:`cash` 初始 = capital;**以 on_trade 回报的实际成交价**(非委托价)按 `成交额 + 佣金 + 滑点成本` 扣减,卖出加回;与 §6.2 由引擎 daily_df 推导的 cash_t 必须逐日一致(§11 资金守恒测试钉住)
-- 信号形态买入:`budget = (cash 或 equity) × entry_pct`,`shares = floor(budget / price)`;`entry_basis ∈ {total, cash}`;shares=0 则跳过并记录
+- 信号形态买入:`budget = (cash 或 equity) × entry_pct`,**股数按决策 bar 收盘价折算** `shares = floor(budget / close_t)`;实际成交在 t+1 开盘价,现金扣减以 on_trade 实际回报校准(允许与 budget 有小额偏差);`entry_basis ∈ {total, cash}`;shares=0 则跳过并记录
 - 仅信号形态适用 entry_pct/entry_basis;海龟/定投按各自规则
 
 ### 5.3 策略模板
 1. **CrossTradeStrategy**(×3 信号源 = 3 形态):on_bar 收到金叉 → 按 sizing 买入;死叉 → 清仓卖出。无持仓时忽略死叉。
-2. **CrossTpslStrategy**(×3 信号源 = 3 形态):金叉 → 按 sizing 发限价买单;on_trade 得到实际成交价后,挂**止盈与止损两张 vnpy 本地 stop 单**(sell stop,触发价 = 成交价×(1+take_profit_pct) / 成交价×(1−stop_loss_pct)),由引擎 stop 单规则撮合(含滑点)——禁止策略内自判成交绕过引擎,否则 §6.2 net_pnl 曲线失真;死叉 → 撤销 stop 单并限价清仓;空仓后金叉可再入场。
+2. **CrossTpslStrategy**(×3 信号源 = 3 形态):金叉 → 按 sizing 发限价买单;on_trade 得到实际成交价后挂**止盈限价卖单**(成交价×(1+take_profit_pct))与**止损 vnpy stop 卖单**(成交价×(1−stop_loss_pct))。全部出场经引擎撮合(禁止策略内自判成交绕过引擎,否则 §6.2 net_pnl 曲线失真);vnpy 日频撮合下:止损单在 bar 触发价内触发,止盈限价单依赖开盘跳空触及,**死叉清仓作为兜底出场**;空仓后金叉可再入场。
 3. **TurtleStrategy**:唐奇安 entry/exit 通道(默认 20/10,可配)+ ATR(20);`unit_shares = floor((equity × 1%) / ATR)`(经典 1N 风险),最多 4 单元(突破加仓间隔 0.5N);总止损 = 最近入场价 − 2N,挂 vnpy stop 单全平;通道反向跌破 → 限价清仓并撤销止损单;做多 only(美股无融券,不做空)。
 4. **DcaStrategy**:间隔 `weekly|biweekly|monthly`,锚定区间首个交易日所在周/月,每间隔首个交易日按固定 `amount` 买入 `floor(amount/price)` 股;现金不足一股则跳过;持有到期不清仓。
 
 全部为 vnpy `CtaTemplate` 子类(可独立于本服务回测);vnpy 撮合语义:t 日 on_bar 挂单 → **t+1 开盘价撮合**(min/max 委托价,开盘价)。
 
 ### 5.4 暖机
-ArrayManager size = max(所有指标周期)+50,默认 100 可配;暖机完成前 on_bar 不产生信号。引擎注入的 history_data 自带暖机段(回测起点 = 用户区间起点,指标在区间内第一根可用 bar 前不触发)。
+**不预置区间外数据**:history_data = 用户区间全部 bar;区间前 `warmup_bars` 根(默认 100,可配)仅由策略内 ArrayManager 消化,`am.inited` 之前不下任何单。数据校验要求行数 ≥ warmup_bars + 10(RANGE_TOO_SHORT)。equity 曲线从区间首日起算,首日 = 初始资金(对比线原点)。
 
 ## 6. 引擎封装与曲线导出(backend/app/engine/)
 
@@ -170,7 +170,7 @@ run_backtesting() → calculate_result() → stats = calculate_statistics()
     "entry_basis": "total | cash"
   },
   "benchmark_symbol": "^GSPC",
-  "cost": { "commission_rate": 0.001, "commission_fixed": 0.0, "slippage": 0.0005 },
+  "cost": { "commission_rate": 0.001, "commission_fixed": 0.0, "slippage": 0.01 },
   "warmup_bars": 100
 }
 ```
