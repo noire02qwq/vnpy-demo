@@ -41,3 +41,23 @@
 - [x] 实测:首建 1:11 / 换 ARG 重建 59s(ARG 变更 npm ci 必重跑);镜像 25.2MB(inspect 口径)
 - [x] 冒烟:`/`=200、`/history`=200、`/result/42` 深链=200(M6 前静态导出直链 404 的遗留就此关闭);测试容器与 marker 镜像已清理
 - [x] findings.md 增 `## Docker(D1)`;下一任务 D2 compose
+
+## 会话 2026-10-20(M6 D2 compose + D3 验收收尾,收官)
+
+- [x] D2 compose 实测(见 findings.md ## Docker(D2)):`up -d --build` 18.3s 两服务健康;独立启停语义正常;**compose 环境真实回测**:AAPL 2023-01-01~2025-12-31 ema_cross 5/20 → 200(3.3s,yfinance 容器内真实拉数),total_return 0.0846、metrics 16 键、trades 34 笔、净值曲线 752 点;数据卷落位 `/app/backend/data`;`down` 卷保留
+- [x] **Electron dist(file://)跨路由实测**(DevTools 远程调试 + python websockets 注入探针):
+  - 直调 `history.pushState({}, '', '/history')` **不抛 SecurityError**,pathname 变为 `/history`,应用正确渲染出历史页(「历史记录/加载策略元数据…」)——brief 预设的 file:// opaque origin pushState 抛 SecurityError 假设**不成立**
+  - 但真实点击 expo-router `<Link href="/history">` 后 **250ms 内整页硬导航**,埋点随旧文档销毁,落在 `chrome-error://chromewebdata/` 白屏;主进程日志实锤 `load failed: file:///history -6 ERR_FILE_NOT_FOUND`
+  - **结论:失败(需兜底)**——expo-router 在 opaque origin(file:// origin=null)下把站内 Link 判为外部链接走 `window.location` 整页导航,而非 SPA pushState;brief 假设的故障机制(SecurityError)不是真实机制
+  - 兜底后续项(三选一,未在本任务实施):① expo 导出 hash 路由;② Electron main.js 内嵌 http 服务托管 dist;③ main.js `will-navigate` 拦截 `file:///<route>` 转 SPA 导航
+  - dev 模式(http://localhost:8081)与 nginx 托管 web(http,SPA fallback)不受影响;实测进程已清理(electron killed,9222 down)
+- [x] **全绿终检(输出原文)**:
+  - backend:`cd backend && uv run pytest -q | tail -1` → `105 passed, 1 warning in 1.19s`
+  - frontend:`cd frontend && npm test | grep "Tests:"` → `Tests:  109 passed, 109 total`
+  - ruff:`uv run ruff check app tests` → `All checks passed!`
+- [x] **验收清单(spec §11)逐项核对**(详见根 README 验收清单表):8 形态 meta ✓ / 指标 8 项测试 ✓ / 三线归一化对比曲线 ✓ / Docker 双镜像构建运行 ✓ / compose 真实回测 34 笔 ✓ / 端到端浏览器联调 ⏳ 待用户 / Electron dist 跨路由 ❌ 失败待兜底
+- [x] 文档树完善:`docs/README.md` 新建(research 三份 + spec + plans 三份索引与阅读顺序);根 README 增验收清单表 + 已知限制(浏览器人工联调待验证、Electron dist 路由失败待兜底、yfinance 限流、arm64 实测 amd64 未测)
+- [x] findings.md 增 `## 前端(D3 Electron dist 路由)`;task_plan.md 全阶段 complete
+- [x] Commit `feat(docker): M6 验收收尾(goal 达成)` + push origin main
+
+**终局判定**:goal 达成(功能全部支持 + 后端 105/前端 109 测试全绿 + 镜像可构建运行 + compose 真实回测);两项人工/后续项如实挂账:浏览器端到端人工联调待用户验证,Electron dist 模式跨路由导航失败列为后续兜底项(dev/http 托管形态不受影响)。

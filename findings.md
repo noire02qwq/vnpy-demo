@@ -292,3 +292,15 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **数据卷落位证据**:容器内 `backtest.db`(172KB)+ `cache/` 均在挂载点 `/app/backend/data`(命名卷 `vndemo_backend-data`);`down` 后卷保留(`docker volume ls` 可见)。
 - **对计划起点的两处微调(均已写进 compose 注释与 docker/README.md)**:① 顶层 `name: vndemo`——目录名 docker 作默认项目名太泛(容器会是 docker-backend-1、卷 docker_backend-data,与他项目易撞),定名后为 vndemo-backend-1 / vndemo_backend-data;② healthcheck 加 `start_period: 15s`——vnpy import 链路冷启动可能超过首个 30s 探测间隔,加宽限期避免启动期误判 unhealthy。其余(两服务/healthz python urllib/卷/build arg 默认值)与计划一致。
 - **README(docker/README.md)覆盖**:构建/启动/停止/独立启停/清理(down vs down -v)、端口表、EXPO_PUBLIC_API_BASE 构建期内联说明(本机浏览器场景用默认 localhost:8000;跨机部署需改宿主 IP 重建前端镜像,ARG 失效全量重建 ~60s)、数据卷红线(首挂必须空卷:create_all 不迁移,旧 schema db 进卷接口 500,`down -v` 删卷即愈、台账随之清空)、镜像大小参考(backend ~1.8GB 因 vnpy 硬依赖 Qt/PySide6;frontend ~25MB)、ta-lib wheel 路线一句话记录。
+
+## 前端(D3 Electron dist 路由)
+
+任务:验收收尾(2026-10-20)。状态:**实测失败,列后续兜底项**。记录:
+
+- **测试方法**:expo export 重建 dist(21:49 修复波后 dist 已过期,先重建)→ `DESKTOP_URL=../frontend/dist/index.html npx electron ../desktop/main.js --remote-debugging-port=9222` → DevTools HTTP API(`/json/list` 拿 webSocketDebuggerUrl)→ backend venv 的 python `websockets` 库发 `Runtime.evaluate` 探针(系统 python 无 websocket 库)。
+- **直调 history.pushState:不抛 SecurityError**。`history.pushState({}, '', '/history')` 返回 OK,pathname 变 `/history`,且应用渲染出历史页——brief 预设的「file:// opaque origin 抛 SecurityError」假设**不成立**(Chrome 152 对 file:// 的 pushState 同文档路径切换放行)。
+- **真实 Link 点击:整页硬导航 → 白屏**。点击 `<a href="/history">` 后 250ms 内 document 被替换(埋点 `window.__log` 随旧文档销毁),主进程日志实锤 `load failed: file:///history -6 ERR_FILE_NOT_FOUND`,窗口落 `chrome-error://chromewebdata/`。expo-router 在 opaque origin(origin=null)下将站内 Link 判为外部链接走 `window.location` 整页导航,根本没走 pushState。
+- **结论与影响面**:Electron **dist 模式跨路由导航失败**(点任何 Link 白屏,需重启恢复);**dev 模式**(http://localhost:8081)与 **nginx 托管 web**(SPA fallback)不受影响。桌面 dist 形态在兜底落地前不可用于跨路由操作。
+- **兜底后续项(三选一)**:① expo 导出改 hash 路由;② Electron main.js 内嵌 http 服务托管 dist;③ main.js `will-navigate` 拦截 `file:///<route>` 改 SPA 导航。未在本任务实施(任务时间盒外)。
+- **坑**:上一探针点击 Link 白屏后窗口落 `chrome-error://chromewebdata/`,此时 `location.href = location.href` 无法重载回应用,须 `Page.navigate` 显式导航回 index.html 绝对路径。
+- **沙箱坑(复现 F6 教训)**:Electron 子进程仍会带 ELECTRON_RUN_AS_NODE,必须 `env -u ELECTRON_RUN_AS_NODE` 启动,否则 9222 端口永不监听。
