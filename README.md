@@ -46,7 +46,7 @@ API 骨架:`GET /healthz`;完整 REST(`/api/v1/*`)见设计 spec §8。
 | M5 前端(Expo + TradingView) | ⏳ 计划中 |
 | M6 Docker + 端到端验收 | ⏳ 计划中 |
 
-测试:68 passed(backend);ruff clean。每任务 TDD(先红后绿)+ 评审后提交推送。
+测试:105 passed(backend);ruff clean;后端已通过全分支终审(signal_kind 注入等 9 项修复落地)。每任务 TDD(先红后绿)+ 评审后提交推送。
 
 ## 文档树
 
