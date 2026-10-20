@@ -49,3 +49,6 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - backtesting.py 路径: `.venv/lib/python3.12/site-packages/vnpy_ctastrategy/backtesting.py`
 - 实测安装:ta-lib C 库 brew 0.8.1 + Python `ta-lib==0.8.2`(PyPI 无 0.6.4 macOS wheel,0.8.x 可用);yfinance 实装 **1.7.0**(非 0.2.x,API 需按新版校验);sqlalchemy 2.1.5
 - 冒烟:`uv run pytest -q` → 2 passed(1 个无害告警:starlette testclient 提示 httpx2)
+
+## 环境大版本风险(Task 0 评审补充,2026-10-20)
+- 锁定结果含大版本跳级:pandas **3.0.6**、numpy 2.5.4、pytest 9.1.1、sqlalchemy 2.1.5、fastapi 0.150。pandas 3.0 的 CoW/字符串 dtype 变化对数据层(校验/缓存/BarData 转换)影响最大,相关任务以「测试先行+实际行为为准」处理,勿照抄 pandas 2 时代姿势。
