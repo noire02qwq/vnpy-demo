@@ -38,3 +38,14 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - 维护活跃:2025-04 至 2026-10 发 6 个 minor 版本;对比库(backtrader/vectorbt 开源版/zipline-reloaded)维护状态均更差
 - vnpy 对「轻量美股日频回测」适配度社区评价偏低(单标的、偏国内生态、平台重)但用户点名选择;**BarData 字段/时区错误会静默失败 → 转换层必须严格校验+测试**
 - CTA 引擎单标的——与我们「每次回测一个标的」的形态天然一致
+
+## vnpy 4.5.0 内省(Task 0, 2026-10-20)
+- **版本修正**:`vnpy-ctastrategy==1.5.0` 未发布到 PyPI(PyPI 最新 1.4.1;1.5.0 仅是 GitHub tag)。实装 **1.4.1**;与 1.5.0 的 backtesting.py diff 仅为 docstring/局部变量类型标注,**无 API 行为差异**,尽调结论仍适用
+- `set_parameters`: `(self, vt_symbol: str, interval: Interval, start: datetime, rate: float, slippage: float, size: float, pricetick: float, capital: int = 0, end: datetime | None = None, mode: BacktestingMode = BAR, risk_free: float = 0, annual_days: int = 240, half_life: int = 120) -> None`
+  - **无 `fixed` 参数** → 后续 runner 用 rate-only(成本模型退化为比率佣金)
+  - `rate/slippage/size/pricetick` 为必填且在可选 `end` 之前(与尽调记录的参数顺序一致)
+  - **存在 `risk_free`** → 夏普/信息比率可直接用,不必自算无风险利率
+- `add_strategy`: `(self, strategy_class: type[CtaTemplate], setting: dict) -> None`;`get_all_trades` 存在
+- backtesting.py 路径: `.venv/lib/python3.12/site-packages/vnpy_ctastrategy/backtesting.py`
+- 实测安装:ta-lib C 库 brew 0.8.1 + Python `ta-lib==0.8.2`(PyPI 无 0.6.4 macOS wheel,0.8.x 可用);yfinance 实装 **1.7.0**(非 0.2.x,API 需按新版校验);sqlalchemy 2.1.5
+- 冒烟:`uv run pytest -q` → 2 passed(1 个无害告警:starlette testclient 提示 httpx2)
