@@ -31,6 +31,8 @@ uv run uvicorn app.main:app --reload   # 本地服务 :8000
 
 API 骨架:`GET /healthz`;完整 REST(`/api/v1/*`)见设计 spec §8。
 
+- 交互式 API 文档:启动后访问 http://127.0.0.1:8000/docs
+
 ## 当前状态(实时更新)
 
 | 里程碑 | 状态 |
@@ -44,7 +46,7 @@ API 骨架:`GET /healthz`;完整 REST(`/api/v1/*`)见设计 spec §8。
 | M5 前端(Expo + TradingView) | ⏳ 计划中 |
 | M6 Docker + 端到端验收 | ⏳ 计划中 |
 
-测试:52 passed(backend);ruff clean。每任务 TDD(先红后绿)+ 评审后提交推送。
+测试:68 passed(backend);ruff clean。每任务 TDD(先红后绿)+ 评审后提交推送。
 
 ## 文档树
 
