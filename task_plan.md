@@ -48,7 +48,7 @@
 - [x] 指标:总收益/年化/Alpha/MDD/波动率/Beta/夏普/信息比率 + ^GSPC 基准对比曲线(初始归零)(Task 15,57 测试绿)
 - [x] FastAPI API(拉数/回测/历史)+ SQLite 落库(Task 16-18,68 测试绿)
 - [x] RN 前端:回测配置页 / 结果页(TradingView K线+指标+三线对比)/ 历史页(F0-F7,102 测试绿+端到端冒烟)
-- [ ] Docker:backend 镜像 + frontend(web)镜像,可分别构建运行
+- [ ] Docker:backend 镜像 + frontend(web)镜像,可分别构建运行(D0 后端镜像完成:ta-lib wheel 路线 1.79GB,冒烟通过;D1 前端镜像待做)
 - [ ] 文档树完善(docs/ 结构化)
 
 ### Phase 5:验收 — Status: pending

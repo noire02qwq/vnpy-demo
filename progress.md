@@ -27,3 +27,10 @@
 - [x] `npm test` 102 passed / 7 suites;`npx tsc --noEmit` 干净;后台进程(uvicorn/http.server)已 pkill,端口复核为空
 - [x] README 根三处更新(M5 ✅/测试计数/快速开始前端段)+ frontend/README.md 中文新建(安装/测试/web/桌面)
 - [ ] 真实浏览器人工联调(配置 → 回测 → 结果页图表/指标/成交 → 历史页)待用户验证;API 层与产物层已全部打通
+
+## 会话 2026-10-20(M6 Docker,D0 后端镜像)
+- [x] `docker/backend.Dockerfile` + `docker/.dockerignore`:python:3.12-slim + ghcr.io/astral-sh/uv,`uv sync --frozen --no-dev --no-install-project` 入 /opt/venv;PYTHONPATH=/app/backend,`VNDEMO_DATA_DIR=/app/backend/data`(相对 CWD 默认会落 /app/data,偏差已记 findings)
+- [x] ta-lib 路线实测定案:wheel(uv.lock 锁 ta-lib 0.8.2,manylinux wheel 捆绑 C 库,容器内 SMA 实算通过);计划中的 apt build-essential 编译层与 0.6.4 源码 fallback 均不需要
+- [x] 实测:首建 2:57 / 终版 1:42;镜像 1.79GB(`UV_NO_CACHE=1` 免去 uv 下载缓存留层,原 3.34GB;大头 PySide6 635MB 系 vnpy 4.5.0 硬依赖)
+- [x] 冒烟:run -d -p 8000:8000 → healthz {"status":"ok"} → meta/strategies 8 形态 → backtest.db 实落 /app/backend/data;测试容器已清理
+- [x] findings.md 增 `## Docker(D0)`;下一任务 D1 前端镜像

@@ -1,0 +1,35 @@
+# 构建上下文瘦身(仓库根上下文;与 backend.Dockerfile 同目录,BuildKit 自动生效)
+# 注意:勿排除 docker/ —— frontend.Dockerfile 需 COPY docker/nginx.conf(D1)
+
+# Git 与工作区杂项
+.git
+.gitignore
+.github
+.claude
+.superpowers
+.idea
+.vscode
+.DS_Store
+
+# 文档(镜像运行不需要任何 md)
+*.md
+
+# 前端重目录(镜像不需要前端,仅避免 node_modules/dist 撑爆上下文)
+frontend/node_modules
+frontend/dist
+frontend/.expo
+frontend/web-build
+frontend/coverage
+frontend/desktop
+
+# 后端运行时数据、虚拟环境与测试产物
+backend/.venv
+backend/data
+backend/tests
+backend/.pytest_cache
+backend/.ruff_cache
+backend/openapi.json
+
+# Python 缓存
+**/__pycache__
+**/*.py[cod]

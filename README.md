@@ -60,7 +60,7 @@ npx expo export -p web && npm run desktop:dist
 | M3 策略 ×8 形态 | ✅ 测试全绿 |
 | M4 指标 + API + 落库 | ✅ 测试全绿(68 tests,Task 15-18 完成;Task 19 收尾中) |
 | M5 前端(Expo + TradingView) | ✅ 102 tests + tsc clean;web 导出 + Electron 桌面壳冒烟通过;浏览器人工联调待用户验证 |
-| M6 Docker + 端到端验收 | 🚧 Plan 3 编写中 |
+| M6 Docker + 端到端验收 | 🚧 D0 后端镜像完成(ta-lib wheel 路线,1.79GB,冒烟通过);D1 前端镜像进行中 |
 
 测试:105 passed(backend)+ 102 passed(frontend);ruff clean;后端已通过全分支终审(signal_kind 注入等 9 项修复落地)。每任务 TDD(先红后绿)+ 评审后提交推送。
 

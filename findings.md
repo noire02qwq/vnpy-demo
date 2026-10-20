@@ -244,3 +244,15 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **9321 等本地端口起 python http.server 可行**,但 9000 被本机其他服务占用(S3 风格响应),冒烟换端口即避。
 - **产物冒烟证据**:index.html 200(22KB)、entry/index/history bundle 全 200、history.html/_sitemap.html/result/[id].html 全 200;后端与静态服务进程已 pkill 清理,端口 8000/9321 复核为空。
 - **测试规模**:102 passed / 7 suites 不变(F6 后无新代码,本任务为文档+冒烟);`npx tsc --noEmit` 干净;`npx expo export -p web` 复验通过(5 路由)。
+
+## Docker(D0)
+
+任务:后端镜像(python:3.12-slim + uv frozen;2026-10-20)。状态:完成。记录:
+
+- **ta-lib 路线:wheel(计划中的 apt 编译层已删)**。uv.lock 锁定 ta-lib 0.8.2(PyPI),`>=0.5` 起 manylinux wheel 捆绑 C 库;linux/arm64 cp312 wheel 直接装好,容器内 `talib.SMA` 实算正确(3.5),无需 build-essential、无需 0.6.4 源码编译 fallback。镜像因此不含任何 apt 编译层。
+- **构建实测**:首建 2:57(含镜像导出);改 `UV_NO_CACHE=1` 后重建 1:42(uv sync 80.7s + 导出 19.8s)。镜像 **1.79GB**(未加该 env 时 3.34GB——uv 下载缓存留层浪费约 1.55GB,已记入 Dockerfile 注释)。
+- **体积大头是 vnpy 4.5.0 的 GUI 依赖**:site-packages 内 PySide6 635MB、pyarrow 148MB、pandas 44MB;vnpy 4.5.0 硬依赖 Qt 栈(shiboken6/qtpy/pyqtgraph),headless 镜像无法规避,1.79GB 属合理水位。
+- **偏差:data_dir 显式化**。`Settings.data_dir` 默认相对 CWD 的 `Path("data")`,计划 Dockerfile `WORKDIR /app` 会让 SQLite 落 `/app/data`,与约定挂载点 `/app/backend/data` 不符;经 pydantic-settings 的 `VNDEMO_DATA_DIR=/app/backend/data`(env_prefix VNDEMO_)显式指定,容器内实测 `backtest.db` 落位正确。D2 数据卷按此路径挂载。
+- **docker/.dockerignore 对 `-f docker/backend.Dockerfile` 生效的机制**:BuildKit 按 `<dockerfile>.dockerignore` → Dockerfile 同目录 `.dockerignore` → 上下文根 `.dockerignore` 三级查找;文件放 docker/ 目录即命中(勿排 `docker/` 自身,D1 的 `COPY docker/nginx.conf` 需要它进上下文)。
+- **镜像自足性**:应用运行时自建数据目录(`db/session.py`、`data/cache.py` 均 `mkdir(parents=True)`),Dockerfile 无需预建;healthcheck 用 python urllib(D2),镜像无需装 curl,进一步省 apt 层。
+- **冒烟证据(最终镜像)**:`docker run -d -p 8000:8000` → `curl --noproxy '*' 127.0.0.1:8000/healthz` = `{"status":"ok"}`;`/api/v1/meta/strategies` 8 形态(macd_cross/macd_tpsl/kdj_cross/kdj_tpsl/ema_cross/ema_tpsl/turtle/dca);容器内 `import vnpy` 4.5.0、talib SMA 实算通过;测试容器已清理。
