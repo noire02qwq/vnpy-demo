@@ -34,3 +34,10 @@
 - [x] 实测:首建 2:57 / 终版 1:42;镜像 1.79GB(`UV_NO_CACHE=1` 免去 uv 下载缓存留层,原 3.34GB;大头 PySide6 635MB 系 vnpy 4.5.0 硬依赖)
 - [x] 冒烟:run -d -p 8000:8000 → healthz {"status":"ok"} → meta/strategies 8 形态 → backtest.db 实落 /app/backend/data;测试容器已清理
 - [x] findings.md 增 `## Docker(D0)`;下一任务 D1 前端镜像
+
+## 会话 2026-10-20(M6 Docker,D1 前端镜像)
+- [x] `docker/frontend.Dockerfile` + `docker/nginx.conf`:node:20-alpine 多阶段(npm ci → expo export → dist),nginx:alpine 托管,listen 8080,`try_files $uri $uri.html $uri/ /index.html` SPA fallback
+- [x] EXPO_PUBLIC_API_BASE 构建期注入实锤:marker 值另建镜像,bundle 内 `const t="http://vndemo-inject-check:9999"` 且 localhost:8000 计数 0(缺省字面量被压缩器消除)——非 ?? 缺省误判
+- [x] 实测:首建 1:11 / 换 ARG 重建 59s(ARG 变更 npm ci 必重跑);镜像 25.2MB(inspect 口径)
+- [x] 冒烟:`/`=200、`/history`=200、`/result/42` 深链=200(M6 前静态导出直链 404 的遗留就此关闭);测试容器与 marker 镜像已清理
+- [x] findings.md 增 `## Docker(D1)`;下一任务 D2 compose

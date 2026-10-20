@@ -269,3 +269,15 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **类型诚实化(F-M4)**:`StrategySpec.entry_pct/entry_basis` 改可选(与后端契约一致:turtle/dca 省略,后端默认 100.0/"total"),`buildRequest` 非 signal 分支的 `as StrategySpec` 断言随之删除;护栏为「类型级测试」——测试内直接 `{ type: "turtle", params }` 构造 StrategySpec,entry 字段必填时该文件 tsc 直接报错 TS2739。
 - **jest.mock 工厂导出可变状态的模式**:mock 工厂不能引用外部变量(TDZ),但可以在工厂内建对象、以非标准导出(如 `__routeParams`)暴露,测试侧 `import * as Mod` 后经类型断言取回——render 时才求值的闭包读模块级可变容器,是驱动「路由参数变化」类测试的干净做法。
 - **测试规模**:102 → 109(+7:F-I1 两例/F-I2 三例/F-M1 一例/F-M2 两例);`npx tsc --noEmit` exit 0;desktop/main.js 经 `node --check` 语法兜底(无 electron 测试基建)。
+
+## Docker(D1)
+
+任务:前端镜像(expo export + nginx SPA fallback;2026-10-20)。状态:完成。记录:
+
+- **构建实测**:首建 1:11(npm ci 约 40s + expo export 11.5s);改 ARG 值重建 59s(ARG/ENV 变更自该层起全部失效,npm ci 必重跑——换 API base 即全量重建,层缓存救不了)。镜像 **25.2MB**(`docker image inspect .Size`,nginx:alpine ≈22MB + dist ≈3MB;containerd store 的 `docker images` 表显示 94.1MB 是含共享快照的 disk usage 口径,非镜像真实大小)。D0 后端 1.79GB 对比,前端体量可忽略。
+- **API base 注入证明(严格版)**:`client.ts` 写的是 `process.env.EXPO_PUBLIC_API_BASE ?? "http://localhost:8000"`,默认镜像里 grep 到 `localhost:8000` 无法区分是「注入成功」还是「走了 ?? 缺省字面量」。实测用 marker 值 `--build-arg EXPO_PUBLIC_API_BASE=http://vndemo-inject-check:9999` 另建一镜像:bundle 内出现 `const t="http://vndemo-inject-check:9999"`,且该镜像 bundle 里 `localhost:8000` 计数为 **0**(压缩器把 `非空字面量 ?? 缺省` 整体折叠,缺省分支被消除)——build-arg 内联实锤,运行时 env 无效也随之证实。
+- **SPA fallback 实测**:nginx `try_files $uri $uri.html $uri/ /index.html`(listen 8080 免特权);`/`=200、`/history`=200、`/result/42` 深链=200——解决了 progress.md M6 前静态导出直链 404 的遗留(python http.server 无 fallback 能力)。expo static 导出 5 路由(/、/history、/_sitemap、/+not-found、/result/[id])。
+- **`.dockerignore` 复核(D0 提醒项)**:确认未排 `docker/`(nginx.conf 需进上下文)与 frontend 源码;`frontend/node_modules`、`frontend/dist`、`frontend/desktop`(Electron 壳)已排除,`*.md` 只排根级不影响 frontend 子目录源文件。`COPY frontend/` 实际带入体积约 3MB(源码+assets),上下文无 node_modules 拖累。
+- **nginx 配置细节**:静态段 `location /_expo/static/` 加 `immutable` 长缓存(文件名带内容哈希)+ `try_files $uri =404`(资源缺失就该 404,不回退 html);html 入口走默认无缓存头,便于换版。
+- **`npm ci --no-audit --no-fund`**:devDependencies 全量装(electron postinstall ~100MB 下载在 build 阶段,不进最终镜像);未用 `--omit=dev`(typescript 等在 dev,expo export 的 Metro 链路对缺依赖行为不可控,稳妥优先)。
+- **冒烟证据**:`docker run -d -p 8080:8080` → `/`=200(含 root div 的 index.html)、`/history`=200、`/result/42`=200;bundle 内嵌 API base 已验证;测试容器与 marker 镜像均已清理。
