@@ -183,3 +183,12 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **测试规模**:brief Step 1 的 4 组全实现 + 追加 fetchData/listRuns 查询参数/getRun/getStrategies 解包/非 JSON 错误体 5 项,参数化展开后 17 passed(含 smoke 1);`npx tsc --noEmit` exit 0
 - **评审修正(metrics 值域放宽)**:初版 `metrics: Record<string, number>` 写窄了(dispatch 契约行口径)——后端实测三态:数值指标 / `start_date`、`end_date` 为 "YYYY-MM-DD" 字符串(vnpy stats 是 date,service 层 strftime)/ 风控 8 键在样本不足(n<3)时为 null(Task 15 契约)→ 改 `MetricsMap = Record<string, number | string | null>`,BacktestResult 与 RunSummary 同步;测试 fixture 补字符串与 null 值锁定该契约
 - **评审修正(headers 合并)**:request 包装原 `headers: {...}, ...init` 展开顺序会把调用方传入的 init.headers 整体顶掉默认 Content-Type → 改 `{ ...init, headers: { "Content-Type": "application/json", ...init?.headers } }`,调用方自定义头与 JSON 头合并
+
+## 前端(F2)
+
+- **buildChartPayload 返回类型取 ChartPayload(brief 写 object)**:契约行签名为 `: object`,实现声明为导出的具体接口 `ChartPayload`(candles/emaFast?/emaSlow?/macd?/kdj?/lines/times)——它是 `object` 的子类型,所有按 `object` 接收的调用点(F3)照常兼容,同时让 F2 测试与 F3 消费端拿到字段级类型,免 `as` 断言(strict 禁 any 的最优解);行为与 brief 描述逐键一致
+- **ema/macd/kdj 键用条件展开而非 undefined 赋值**:`...(overlays?.ema_fast !== undefined ? { emaFast: ... } : {})` 写法保证键直接不出现在对象里(JSON.stringify 后消失),并对未来若启用 exactOptionalPropertyTypes 也稳
+- **toHistogramMacd 长度截短口径**:brief 写"与 times 取 min",实现为 `min(sub.hist.length, times.length)`(value 只来自 hist,dif/dea 长度不参与;后端三者等长,无实际分歧);0 计入红(≥0 分界,brief 明确)
+- **toMarkers 颜色约定**:buy=绿 #26a69a/belowBar/arrowUp/"B",sell=红 #ef5350/aboveBar/arrowDown/"S"(lightweight-charts 官方示例配色,红绿与 MACD 柱国内约定一致)
+- **HTML 生成**:单行拼接,`<script>const PAYLOAD = <json>;/*__INIT__*/</script>` 中 json 经 `replace(/</g, "\\u003c")` 全量转义(payload 段无裸 `<`,连非 script 的 `<` 一并转义,比只防 `</script>` 更保守);INIT_PLACEHOLDER 导出为常量供 F3 精确替换;测试用 `/const PAYLOAD = (.*);/` 从 HTML 抠回 JSON 且深度相等(含含 `</script>` 的恶意值字段)
+- **测试规模**:brief Step 1 各组全实现 + 补 kdj 形态、0 值分界、多笔保序,18 passed(全量 35 = smoke 1 + api 16 + chart-data 18);`npx tsc --noEmit` exit 0
