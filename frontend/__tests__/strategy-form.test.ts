@@ -11,7 +11,7 @@ import {
   validateForm,
 } from "../src/components/StrategyForm";
 import type { FormState } from "../src/components/StrategyForm";
-import type { BacktestRequest, StrategyMeta } from "../src/api/types";
+import type { BacktestRequest, StrategyMeta, StrategySpec } from "../src/api/types";
 
 /** ema_cross(signal/cross 形态)schema 与注册表 defaults 对齐(不含 entry 字段) */
 const emaCrossMeta: StrategyMeta = {
@@ -222,7 +222,7 @@ describe("buildRequest", () => {
     const req = buildRequest(state, emaCrossMeta);
     expect(req.strategy).toEqual({
       type: "ema_cross",
-      params: { fast_period: 5, slow_period: 20, am_size: 100 },
+      params: { fast_period: 5, slow_period: 20 },
       entry_pct: 50,
       entry_basis: "cash",
     });
@@ -270,8 +270,15 @@ describe("buildRequest", () => {
       slow_period: 20,
       take_profit_pct: 10,
       stop_loss_pct: 5,
-      am_size: 30,
     });
+  });
+
+  it("am_size 由后端 _assemble_params 用 warmup 无条件覆盖:params 不含 am_size(即便 state 携带)", () => {
+    const req = buildRequest(validState(), emaCrossMeta);
+    expect(Object.prototype.hasOwnProperty.call(req.strategy.params ?? {}, "am_size")).toBe(
+      false,
+    );
+    expect(req.strategy.params).toEqual({ fast_period: 5, slow_period: 20 });
   });
 
   it("boolean 参数保留布尔,未知 params 键被过滤", () => {
@@ -320,8 +327,10 @@ describe("buildRequest", () => {
     expect(req.strategy.params).toEqual({
       interval: "monthly",
       amount: 1000,
-      am_size: 10,
     });
+    expect(Object.prototype.hasOwnProperty.call(req.strategy.params ?? {}, "am_size")).toBe(
+      false,
+    );
     expect(Object.prototype.hasOwnProperty.call(req.strategy, "entry_pct")).toBe(false);
   });
 });
@@ -370,6 +379,16 @@ describe("StrategyForm 组件 smoke", () => {
     expect(screen.getByText("加载策略元数据…")).toBeTruthy();
   });
 
+  it("am_size 为后端 warmup 托管参数:不渲染控件(entry 字段亦不在参数区)", async () => {
+    const screen = await render(
+      React.createElement(StrategyForm, { metas: [emaCrossMeta], onSubmit }),
+    );
+    expect(screen.queryByText("am_size")).toBeNull();
+    expect(screen.queryByText("entry_pct")).toBeNull();
+    expect(screen.getByText("fast_period")).toBeTruthy();
+    expect(screen.getByText("slow_period")).toBeTruthy();
+  });
+
   it("非法提交:显示中文错误且不调 onSubmit", async () => {
     const screen = await render(
       React.createElement(StrategyForm, { metas: [emaCrossMeta], onSubmit }),
@@ -405,7 +424,6 @@ describe("createInitialState", () => {
       slow_period: "20",
       take_profit_pct: "10",
       stop_loss_pct: "5",
-      am_size: "30",
     });
     expect(state.entryPct).toBe("100");
     expect(state.entryBasis).toBe("cash");
@@ -416,5 +434,15 @@ describe("createInitialState", () => {
     expect(state.strategyType).toBe("");
     expect(state.params).toEqual({});
     expect(state.benchmarkSymbol).toBe("^GSPC");
+  });
+});
+
+describe("StrategySpec 类型契约(类型诚实化)", () => {
+  // 断言即护栏:entry 字段可选后,非 signal 形态 spec 无需 as 断言即可构造(tsc 校验)
+  it("entry 字段可选:非 signal 形态 spec 直接构造,entry_pct/entry_basis 为 undefined", () => {
+    const spec: StrategySpec = { type: "turtle", params: { entry_days: 20 } };
+    expect(spec.entry_pct).toBeUndefined();
+    expect(spec.entry_basis).toBeUndefined();
+    expect(spec.type).toBe("turtle");
   });
 });

@@ -79,7 +79,7 @@ docker compose up backend frontend
 
 - Python:`ruff`(line-length 100, target py312),公共函数必须 type hints,docstring 中文一句话;禁 `# type: ignore` 除非有注释解释
 - 策略代码即标准 vnpy `CtaTemplate` 子类,可脱离本服务独立回测
-- TypeScript:`strict: true`;API 类型一律从 openapi schema 生成,禁止手写接口定义
+- TypeScript:`strict: true`;API 类型手写镜像后端 spec §8 与 schema.json,后端结构变化时同步更新
 - 配置一律 pydantic-settings / expo 常量文件,禁止散落魔法数
 
 ## 测试规范

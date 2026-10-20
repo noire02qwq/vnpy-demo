@@ -44,8 +44,9 @@ export interface StrategyMeta {
 export interface StrategySpec {
   type: StrategyType;
   params?: Record<string, StrategyParamValue>;
-  entry_pct: number;
-  entry_basis: EntryBasis;
+  /** 仅 signal 形态携带;turtle/dca 省略(后端默认 100.0/"total") */
+  entry_pct?: number;
+  entry_basis?: EntryBasis;
 }
 
 /** 手续费/滑点配置(后端 CostConfig,extra=forbid,无 commission_fixed) */

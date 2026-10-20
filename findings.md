@@ -256,3 +256,16 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **docker/.dockerignore 对 `-f docker/backend.Dockerfile` 生效的机制**:BuildKit 按 `<dockerfile>.dockerignore` → Dockerfile 同目录 `.dockerignore` → 上下文根 `.dockerignore` 三级查找;文件放 docker/ 目录即命中(勿排 `docker/` 自身,D1 的 `COPY docker/nginx.conf` 需要它进上下文)。
 - **镜像自足性**:应用运行时自建数据目录(`db/session.py`、`data/cache.py` 均 `mkdir(parents=True)`),Dockerfile 无需预建;healthcheck 用 python urllib(D2),镜像无需装 curl,进一步省 apt 层。
 - **冒烟证据(最终镜像)**:`docker run -d -p 8000:8000` → `curl --noproxy '*' 127.0.0.1:8000/healthz` = `{"status":"ok"}`;`/api/v1/meta/strategies` 8 形态(macd_cross/macd_tpsl/kdj_cross/kdj_tpsl/ema_cross/ema_tpsl/turtle/dca);容器内 `import vnpy` 4.5.0、talib SMA 实算通过;测试容器已清理。
+
+## 前端(终审修复波)
+
+任务:M5 前端终审 7 项修复(F-I1/I2、F-M1-M5)单波完成(2026-10-20)。状态:完成,109 测试绿 + tsc 干净,单提交推送。记录:
+
+- **三线图单位混轴(F-I1)**:`buildChartPayload` 原样透传 `curves.equity/position_value`(绝对资金额,百万量级)与 `benchmark`(累计收益率 %,个位量级)同画一张 lines 图,基准线被压成贴地直线。修法:新增 `toCumReturnPct(values, initialCapital)` 归一化 equity/position 为 `(v/本金-1)×100`,benchmark 原样(spec §7 三线同轴,起点 0);ThreeLineChart 图例追加单位说明「三线均为累计收益率 %,起点 0」。坑:浮点经除乘后 `1_010_000 → 1.0000000000000009`,断言一律 `toBeCloseTo(x, 9)` 禁 `toBe`。
+- **am_size 死控件(F-I2)**:后端 `_assemble_params` 无条件用 warmup_bars 覆盖 `am_size`,前端表单却渲染该输入并随请求上送——UI 双输入,实际只有一个生效,误导用户。修法:StrategyForm 三处(参数控件区 paramKeys / createInitialState / buildRequest)统一经 `NON_PARAM_KEYS`(entry_pct/entry_basis/am_size)排除,请求 params 不再带 am_size;测试断言 state 携带 am_size 时产物也不含。
+- **结果页失败态残留(F-M1)**:`useEffect` 以 `[id]` 为依赖重拉,但 `failed` 只置 true 从不复位——失败后路由换 id 重进同组件(remount 场景之外)会永久卡失败视图。防御性一行:重拉前 `setFailed(false)`;测试经 expo-router mock 暴露可变 `__routeParams` 容器 + `rerender` 驱动 id 变化(失败 → 换 id → 断言内容恢复渲染)。
+- **整数指标格式(F-M2)**:`total_trade_count/total_days` 原走 `toFixed(3)` 渲染成 `12.000/252.000`,计数语义失真。新增 `COUNT_KEYS` 集合,整数直接 `String(value)`(带 `Number.isInteger` 守卫,非整数值回退 toFixed(3));百分率/比率键口径不变。
+- **Electron did-fail-load 静默(F-M3)**:dev server 未起/静态产物缺失时白屏无任何终端线索。`desktop/main.js` 加一行 `webContents.on("did-fail-load", ...)` 输出 `[vndemo] load failed: url code desc`。
+- **类型诚实化(F-M4)**:`StrategySpec.entry_pct/entry_basis` 改可选(与后端契约一致:turtle/dca 省略,后端默认 100.0/"total"),`buildRequest` 非 signal 分支的 `as StrategySpec` 断言随之删除;护栏为「类型级测试」——测试内直接 `{ type: "turtle", params }` 构造 StrategySpec,entry 字段必填时该文件 tsc 直接报错 TS2739。
+- **jest.mock 工厂导出可变状态的模式**:mock 工厂不能引用外部变量(TDZ),但可以在工厂内建对象、以非标准导出(如 `__routeParams`)暴露,测试侧 `import * as Mod` 后经类型断言取回——render 时才求值的闭包读模块级可变容器,是驱动「路由参数变化」类测试的干净做法。
+- **测试规模**:102 → 109(+7:F-I1 两例/F-I2 三例/F-M1 一例/F-M2 两例);`npx tsc --noEmit` exit 0;desktop/main.js 经 `node --check` 语法兜底(无 electron 测试基建)。

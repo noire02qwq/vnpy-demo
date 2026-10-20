@@ -32,10 +32,13 @@ jest.mock("expo-router", () => {
   // 类型注解在编译期擦除,工厂无运行时越界引用(children 本就是已创建的元素)
   const Link = ({ children }: { children?: React.ReactNode }) => children ?? null;
   const router = { push: jest.fn<void, [string]>(), back: jest.fn<void, []>() };
+  // 可变路由参数容器:结果页 id 变化重拉(F-M1)测试经 __routeParams 改写 id
+  const routeParams = { id: "run-1" };
   return {
     Link,
     useRouter: () => router,
-    useLocalSearchParams: () => ({ id: "run-1" }),
+    useLocalSearchParams: () => routeParams,
+    __routeParams: routeParams,
   };
 });
 
@@ -43,6 +46,7 @@ import IndexPage from "../app/index";
 import ResultPage from "../app/result/[id]";
 import HistoryPage from "../app/history";
 import { useRouter } from "expo-router";
+import * as ExpoRouter from "expo-router";
 import { formatMetric, METRIC_LABELS } from "../src/components/MetricCards";
 import { MetricCards } from "../src/components/MetricCards";
 import { ApiError } from "../src/api/client";
@@ -54,6 +58,11 @@ import type {
   RunSummary,
   StrategyMeta,
 } from "../src/api/types";
+
+/** expo-router mock 暴露的可变参数容器(运行时 mock 才有的导出,类型侧手工标注) */
+const routeParams = (ExpoRouter as unknown as {
+  __routeParams: { id: string };
+}).__routeParams;
 
 /** 被测页面与断言共用的 mock 句柄(import 求值后取回,无 TDZ 问题) */
 const mockPush = useRouter().push;
@@ -161,8 +170,17 @@ describe("formatMetric", () => {
     expect(formatMetric("sharpe_ratio", 1.234)).toBe("1.234");
     expect(formatMetric("beta", -0.5)).toBe("-0.500");
     expect(formatMetric("alpha_annual", 0.05)).toBe("0.050");
-    expect(formatMetric("total_trade_count", 12)).toBe("12.000");
-    expect(formatMetric("total_days", 252)).toBe("252.000");
+    expect(formatMetric("total_commission", 128.5)).toBe("128.500");
+  });
+
+  it("计数类键(total_trade_count/total_days):整数直接字符串化,不补小数位", () => {
+    expect(formatMetric("total_trade_count", 12)).toBe("12");
+    expect(formatMetric("total_days", 252)).toBe("252");
+    expect(formatMetric("total_trade_count", 12.5)).toBe("12.500");
+  });
+
+  it("百分率口径不变:total_return 0.5 → 50.00%", () => {
+    expect(formatMetric("total_return", 0.5)).toBe("50.00%");
   });
 
   it("null → —", () => {
@@ -236,6 +254,9 @@ describe("配置页(app/index)", () => {
     expect(screen.queryByText("加载策略元数据…")).toBeNull();
     expect(screen.getByText("vn-demo 回测")).toBeTruthy();
     expect(screen.getByText("历史记录")).toBeTruthy();
+    // am_size 由后端 warmup 托管:动态参数区不渲染该控件(F-I2)
+    expect(screen.queryByText("am_size")).toBeNull();
+    expect(screen.getByText("fast_period")).toBeTruthy();
   });
 
   it("元数据加载失败:Alert 中文文案 + 失败提示", async () => {
@@ -304,7 +325,7 @@ describe("结果页(app/result/[id])", () => {
     expect(screen.getByText("-5.00%")).toBeTruthy();
     expect(screen.getByText("夏普比率")).toBeTruthy();
     expect(screen.getByText("1.234")).toBeTruthy();
-    expect(screen.getByText("12.000")).toBeTruthy();
+    expect(screen.getByText("12")).toBeTruthy();
     expect(screen.getByText("—")).toBeTruthy();
     expect(screen.getByText("2020-01-02")).toBeTruthy();
     expect(screen.getByText("K 线与均线")).toBeTruthy();
@@ -345,6 +366,20 @@ describe("结果页(app/result/[id])", () => {
     expect(await screen.findByText("返回")).toBeTruthy();
     expect(alertSpy).toHaveBeenCalledWith("错误", "回测记录不存在");
     expect(screen.queryByText("K 线与均线")).toBeNull();
+  });
+
+  it("id 变化重拉:失败态先重置,新请求成功后恢复内容渲染(F-M1)", async () => {
+    mockGetRun.mockRejectedValueOnce(new ApiError("missing", "RUN_NOT_FOUND"));
+    const screen = await render(React.createElement(ResultPage));
+    expect(await screen.findByText("回测结果加载失败")).toBeTruthy();
+
+    routeParams.id = "run-2";
+    mockGetRun.mockResolvedValue({ ...sampleResult, id: "run-2" });
+    await screen.rerender(React.createElement(ResultPage));
+    expect(await screen.findByText("AAPL · macd_cross")).toBeTruthy();
+    expect(screen.queryByText("回测结果加载失败")).toBeNull();
+
+    routeParams.id = "run-1"; // 还原,免影响后续用例
   });
 });
 

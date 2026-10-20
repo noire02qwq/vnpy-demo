@@ -1,6 +1,6 @@
 # frontend — Expo 前端(Expo Router 三页 + Lightweight Charts)
 
-Expo(React Native)一套代码跑 Web 与桌面壳:配置页(`/`,表单 + 动态参数区)→ 结果页(`/result/[id]`,K 线 + EMA 叠加 + MACD/KDJ 副图 + 指标卡片 + 成交列表)→ 历史页(`/history`,回测记录列表)。API 类型按设计 spec §8 手写于 `src/api/schema.ts`(openapi 导出无字段级 schema)。
+Expo(React Native)一套代码跑 Web 与桌面壳:配置页(`/`,表单 + 动态参数区)→ 结果页(`/result/[id]`,K 线 + EMA 叠加 + MACD/KDJ 副图 + 指标卡片 + 成交列表)→ 历史页(`/history`,回测记录列表)。API 类型按设计 spec §8 手写于 `src/api/types.ts`(与 `src/api/schema.json` openapi 导出对齐)。
 
 ## 安装
 
@@ -12,7 +12,7 @@ npm install    # Node 18+;含 devDependency electron(桌面壳用)
 ## 测试
 
 ```bash
-npm test               # jest + @testing-library/react-native(102 tests)
+npm test               # jest + @testing-library/react-native(109 tests)
 npx tsc --noEmit       # TypeScript strict 类型检查
 ```
 

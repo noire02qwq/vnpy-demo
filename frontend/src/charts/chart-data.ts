@@ -47,6 +47,7 @@ export interface ChartPayload {
   kdj?: KdjSeries;
   /** 交易标记(toMarkers 产物,candles 主图叠加;无成交时缺省) */
   markers?: TradeMarker[];
+  /** 三线对比序列:均为累计收益率 %(spec §7 同轴口径),起点 0 */
   lines: { equity: number[]; position: number[]; benchmark: number[] };
   times: string[];
 }
@@ -113,14 +114,24 @@ export function toHistogramMacd(
 }
 
 /**
+ * 绝对资金额序列 → 相对 initial_capital 的累计收益率 %(spec §7 三线同轴口径):
+ * (v / 本金 - 1) × 100,起点为 0。
+ */
+function toCumReturnPct(values: number[], initialCapital: number): number[] {
+  return values.map((v) => (v / initialCapital - 1) * 100);
+}
+
+/**
  * 打包图表数据包:candles + 可选 ema/macd/kdj + 三线对比序列 + 时间轴。
- * 三线用 curves 的 equity/position_value(绝对资金额)与 benchmark(累计收益率 %),
- * 字段名 lines.equity/lines.position/lines.benchmark;times 取 candles.dates。
+ * 三线统一为累计收益率 % 同轴:equity/position_value 由绝对资金额除以 initial_capital
+ * 归一化,benchmark 后端已是累计收益率 % 原样透传;字段名
+ * lines.equity/lines.position/lines.benchmark;times 取 candles.dates。
  * 形态缺省的键(overlays/sub 不存在)不出现在对象里,JSON 序列化后消失。
  */
 export function buildChartPayload(result: BacktestResult): ChartPayload {
   const overlays = result.candles.overlays;
   const sub = result.candles.sub;
+  const capital = result.request.initial_capital;
   return {
     candles: toCandles(result),
     ...(overlays?.ema_fast !== undefined ? { emaFast: overlays.ema_fast } : {}),
@@ -131,8 +142,8 @@ export function buildChartPayload(result: BacktestResult): ChartPayload {
     ...(sub?.kdj !== undefined ? { kdj: sub.kdj } : {}),
     ...(result.trades.length > 0 ? { markers: toMarkers(result.trades) } : {}),
     lines: {
-      equity: result.curves.equity,
-      position: result.curves.position_value,
+      equity: toCumReturnPct(result.curves.equity, capital),
+      position: toCumReturnPct(result.curves.position_value, capital),
       benchmark: result.curves.benchmark,
     },
     times: result.candles.dates,

@@ -30,6 +30,8 @@ export default function ResultPage() {
     if (id === undefined) {
       return;
     }
+    // 防御性重置:id 变化重拉前先清失败态,避免上一 id 的失败视图残留到新请求
+    setFailed(false);
     let cancelled = false;
     getRun(id)
       .then((data) => {

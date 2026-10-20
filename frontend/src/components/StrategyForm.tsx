@@ -4,7 +4,8 @@
  * - schema 驱动控件:enum → 选择器(web 用原生 <select>,native 用按钮行,不新增依赖;
  *   introspect 结论:RN 社区 Picker 已从 core 剥离,为守住"零新依赖"约束选双平台内建实现)、
  *   boolean → Switch、number/integer → TextInput(string state,提交时 Number());
- * - entry_pct/entry_basis 仅 signal 形态显示;benchmark/cost/warmup 折叠进默认展开的高级设置。
+ * - entry_pct/entry_basis 仅 signal 形态显示;am_size 由后端 warmup 托管,三处
+ *   (参数控件/初始 params/请求 params)统一排除;benchmark/cost/warmup 折叠进默认展开的高级设置。
  */
 import { useState } from "react";
 import {
@@ -46,6 +47,17 @@ export interface FormState {
 const DEFAULT_BENCHMARK = "^GSPC";
 /** entry_pct 缺省(strategy.entry_pct 后端默认 100) */
 const DEFAULT_ENTRY_PCT = "100";
+
+/**
+ * 不进参数控件区/params 请求体的 schema 键:
+ * - entry_pct/entry_basis:提升为 strategy 级字段(signal 形态单独输入);
+ * - am_size:后端 _assemble_params 无条件用 warmup_bars 覆盖,UI 双输入误导,整体不带上。
+ */
+const NON_PARAM_KEYS: ReadonlySet<string> = new Set([
+  "entry_pct",
+  "entry_basis",
+  "am_size",
+]);
 
 /** 标的代码:普通 1-5 大写字母(可带 -X 后缀)或 ^ 引导的指数 3-5 大写字母 */
 const SYMBOL_RE = /^[A-Z]{1,5}(-[A-Z])?$|^\^[A-Z]{3,5}$/;
@@ -155,7 +167,7 @@ export function validateForm(
   return null;
 }
 
-/** 请求装配:params 数字键 Number()、boolean 键保留;仅提交 schema 中存在且非 entry 的键 */
+/** 请求装配:params 数字键 Number()、boolean 键保留;entry/am_size 等托管键排除(NON_PARAM_KEYS) */
 export function buildRequest(
   state: FormState,
   meta: StrategyMeta | undefined,
@@ -165,8 +177,8 @@ export function buildRequest(
   const params: Record<string, StrategyParamValue> = {};
   if (meta) {
     for (const key of Object.keys(meta.schema)) {
-      // entry 字段提升为 strategy 级字段,不落 params
-      if (key === "entry_pct" || key === "entry_basis") {
+      // entry 字段提升为 strategy 级、am_size 由后端 warmup 覆盖:均不落 params
+      if (NON_PARAM_KEYS.has(key)) {
         continue;
       }
       const raw = state.params[key];
@@ -185,7 +197,8 @@ export function buildRequest(
     }
   }
 
-  // signal 形态传 entry 字段;turtle/dca 省略(后端 StrategySpec 默认 100.0/"total")
+  // signal 形态传 entry 字段;turtle/dca 省略(后端 StrategySpec 默认 100.0/"total";
+  // entry 字段类型可选,非 signal 分支无需断言直接构造)
   const isSignal = meta !== undefined && meta.signal !== null;
   const spec: StrategySpec = isSignal
     ? {
@@ -194,7 +207,7 @@ export function buildRequest(
         entry_pct: toNumber(state.entryPct, 100),
         entry_basis: state.entryBasis,
       }
-    : ({ type, params } as StrategySpec);
+    : { type, params };
 
   return {
     symbol: state.symbol.trim(),
@@ -211,13 +224,13 @@ export function buildRequest(
   };
 }
 
-/** 由 meta defaults 生成初始表单状态(defaults 数值 → string;entry 字段单独入 state) */
+/** 由 meta defaults 生成初始表单状态(defaults 数值 → string;entry/am_size 托管键不入 state) */
 export function createInitialState(meta: StrategyMeta | undefined): FormState {
   const params: Record<string, string | boolean> = {};
   const isSignal = meta !== undefined && meta.signal !== null;
   if (meta) {
     for (const [key, value] of Object.entries(meta.defaults)) {
-      if (key === "entry_pct" || key === "entry_basis") {
+      if (NON_PARAM_KEYS.has(key)) {
         continue;
       }
       params[key] = typeof value === "boolean" ? value : String(value);
@@ -334,8 +347,9 @@ export function StrategyForm({
   const meta =
     metas.find((item) => item.type === state.strategyType) ?? metas[0];
   const isSignal = meta.signal !== null;
+  // entry 字段单独渲染、am_size 后端托管:参数控件区一律排除(NON_PARAM_KEYS)
   const paramKeys = Object.keys(meta.schema).filter(
-    (key) => key !== "entry_pct" && key !== "entry_basis",
+    (key) => !NON_PARAM_KEYS.has(key),
   );
 
   const patch = (part: Partial<FormState>) =>

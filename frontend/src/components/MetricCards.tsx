@@ -32,9 +32,13 @@ const PERCENT_KEYS: ReadonlySet<string> = new Set([
   "annual_volatility",
 ]);
 
+/** 计数类键:整数值直接字符串化(交易次数/回测天数补 3 位小数无意义) */
+const COUNT_KEYS: ReadonlySet<string> = new Set(["total_trade_count", "total_days"]);
+
 /**
  * 指标值格式化(纯函数):null/缺省 → "—";字符串(如 start/end 日期)原样;
- * 百分率键 → (×100).toFixed(2)%;其余数值 → toFixed(3);负数正常带符号。
+ * 百分率键 → (×100).toFixed(2)%;计数类键整数值 → String(value);
+ * 其余数值 → toFixed(3);负数正常带符号。
  */
 export function formatMetric(key: string, value: number | string | null): string {
   if (value == null) {
@@ -45,6 +49,9 @@ export function formatMetric(key: string, value: number | string | null): string
   }
   if (PERCENT_KEYS.has(key)) {
     return `${(value * 100).toFixed(2)}%`;
+  }
+  if (COUNT_KEYS.has(key) && Number.isInteger(value)) {
+    return String(value);
   }
   return value.toFixed(3);
 }

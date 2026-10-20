@@ -1,7 +1,8 @@
 /**
- * 三线对比图(总资金/持仓资金/S&P500,基准线为首值 0.0 的累计收益率;equity/position 为绝对资金额),web/native 同构:
- * 内部复用 LightChart 的 lines 模式(import "./LightChart" 经 Metro 平台扩展
- * 解析到 LightChart.web/native 对应实现),并附图例文字标签。
+ * 三线对比图(总资金/持仓资金/S&P500;三线均为相对 initial_capital 的累计收益率 %,
+ * 起点 0,spec §7 同轴口径),web/native 同构:内部复用 LightChart 的 lines 模式
+ * (import "./LightChart" 经 Metro 平台扩展解析到 LightChart.web/native 对应实现),
+ * 并附图例文字标签与单位说明。
  */
 import { View, Text, StyleSheet } from "react-native";
 import { LightChart } from "./LightChart";
@@ -15,6 +16,9 @@ const LEGEND = [
   { label: "S&P500", color: CHART_COLORS.benchmark },
 ] as const;
 
+/** 图例单位说明(三线已归一化同轴,避免误读为绝对资金额) */
+const LEGEND_NOTE = "三线均为累计收益率 %,起点 0";
+
 export function ThreeLineChart({ result }: { result: BacktestResult }) {
   return (
     <View>
@@ -27,6 +31,7 @@ export function ThreeLineChart({ result }: { result: BacktestResult }) {
           </View>
         ))}
       </View>
+      <Text style={styles.legendNote}>{LEGEND_NOTE}</Text>
     </View>
   );
 }
@@ -50,5 +55,10 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 12,
     color: "#333333",
+  },
+  legendNote: {
+    fontSize: 11,
+    color: "#888888",
+    marginTop: 2,
   },
 });
