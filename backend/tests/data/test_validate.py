@@ -56,6 +56,32 @@ def test_too_short() -> None:
     assert e.value.code == ErrorCode.RANGE_TOO_SHORT
 
 
+def test_nan_volume_rejected() -> None:
+    rows = [(f"2023-01-{d:02d}", 10, 11, 9, 10, 100) for d in range(1, 16)]
+    df = make_df(rows)
+    df.iloc[7, df.columns.get_loc("volume")] = np.nan
+    with pytest.raises(AppError) as e:
+        validate_ohlcv(df, "AAPL", warmup_bars=5)
+    assert e.value.code == ErrorCode.NO_DATA
+
+
+def test_negative_volume_rejected() -> None:
+    rows = [(f"2023-01-{d:02d}", 10, 11, 9, 10, 100) for d in range(1, 16)]
+    df = make_df(rows)
+    df.iloc[7, df.columns.get_loc("volume")] = -1
+    with pytest.raises(AppError) as e:
+        validate_ohlcv(df, "AAPL", warmup_bars=5)
+    assert e.value.code == ErrorCode.NO_DATA
+
+
+def test_missing_column_rejected() -> None:
+    rows = [(f"2023-01-{d:02d}", 10, 11, 9, 10, 100) for d in range(1, 16)]
+    df = make_df(rows).drop(columns=["volume"])
+    with pytest.raises(AppError) as e:
+        validate_ohlcv(df, "AAPL", warmup_bars=5)
+    assert e.value.code == ErrorCode.NO_DATA
+
+
 def test_nan_dropped() -> None:
     rows = [(f"2023-02-{d:02d}", 10, 11, 9, 10, 100) for d in range(1, 22)]  # 21 行 - 1 NaN = 20
     df = make_df(rows)

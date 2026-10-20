@@ -42,6 +42,6 @@ def validate_ohlcv(df: pd.DataFrame, symbol: str, warmup_bars: int) -> pd.DataFr
     ]
     if not bad.empty:
         raise AppError(ErrorCode.NO_DATA, "OHLC 不一致", status=422, detail={"rows": len(bad)})
-    if (out["volume"] < 0).any():
-        raise AppError(ErrorCode.NO_DATA, "volume 负数", status=422)
+    if (out["volume"].isna() | (out["volume"] < 0)).any():
+        raise AppError(ErrorCode.NO_DATA, "volume 存在缺失或负数", status=422)
     return out[["open", "high", "low", "close", "volume"]].astype(float)
