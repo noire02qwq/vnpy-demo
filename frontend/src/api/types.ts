@@ -76,6 +76,12 @@ export interface Trade {
   volume: number;
 }
 
+/**
+ * 指标键值:后端 metrics 混合三种值——数值(收益率/回撤等)、
+ * "YYYY-MM-DD" 字符串(start_date/end_date)、null(风控 8 键在样本不足时)。
+ */
+export type MetricsMap = Record<string, number | string | null>;
+
 /** 三条主曲线(与 dates 等长;benchmark 为首值 0.0 的累计收益率 %) */
 export interface Curves {
   dates: string[];
@@ -118,7 +124,7 @@ export interface Candles {
 export interface BacktestResult {
   id: string;
   request: BacktestRequest;
-  metrics: Record<string, number>;
+  metrics: MetricsMap;
   curves: Curves;
   candles: Candles;
   trades: Trade[];
@@ -129,7 +135,7 @@ export interface RunSummary {
   id: string;
   created_at: string;
   request: BacktestRequest;
-  metrics: Record<string, number>;
+  metrics: MetricsMap;
 }
 
 export interface RunList {

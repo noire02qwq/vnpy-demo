@@ -181,3 +181,5 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **`global` 未定义(TS2584)**:`types:["jest"]` 不带 node 全局(tsc 报错信息:改用标准 `globalThis`)→ 测试 mock 用 `globalThis.fetch`,不动 tsconfig(F0 的 types 配置保持)
 - **StrategyMeta.kind/mode 定为 string**:meta 端点对这两字段无枚举契约(registry 值如 "signal"/"long" 未在 openapi 收敛),不臆造联合类型;signal 按 SignalKind("macd"|"kdj"|"ema")| null 收紧
 - **测试规模**:brief Step 1 的 4 组全实现 + 追加 fetchData/listRuns 查询参数/getRun/getStrategies 解包/非 JSON 错误体 5 项,参数化展开后 17 passed(含 smoke 1);`npx tsc --noEmit` exit 0
+- **评审修正(metrics 值域放宽)**:初版 `metrics: Record<string, number>` 写窄了(dispatch 契约行口径)——后端实测三态:数值指标 / `start_date`、`end_date` 为 "YYYY-MM-DD" 字符串(vnpy stats 是 date,service 层 strftime)/ 风控 8 键在样本不足(n<3)时为 null(Task 15 契约)→ 改 `MetricsMap = Record<string, number | string | null>`,BacktestResult 与 RunSummary 同步;测试 fixture 补字符串与 null 值锁定该契约
+- **评审修正(headers 合并)**:request 包装原 `headers: {...}, ...init` 展开顺序会把调用方传入的 init.headers 整体顶掉默认 Content-Type → 改 `{ ...init, headers: { "Content-Type": "application/json", ...init?.headers } }`,调用方自定义头与 JSON 头合并

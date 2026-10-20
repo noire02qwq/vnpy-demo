@@ -32,7 +32,8 @@ const sampleRequest: BacktestRequest = {
 const sampleResult: BacktestResult = {
   id: "run-1",
   request: sampleRequest,
-  metrics: { total_return: 0.12, max_drawdown: 0.05 },
+  // metrics 值域实测三态:数值 / "YYYY-MM-DD" 字符串(start_date/end_date)/ null(风控样本不足)
+  metrics: { total_return: 0.12, max_drawdown: 0.05, start_date: "2024-01-02", information_ratio: null },
   curves: {
     dates: ["2024-01-02", "2024-01-03"],
     equity: [1_000_000, 1_010_000],

@@ -49,11 +49,11 @@ export function errorMessage(code: string | undefined, fallback?: string): strin
   return fallback ?? FALLBACK_TEXT;
 }
 
-/** 统一请求:默认 JSON 头;非 2xx 解析 {code,message} 抛 ApiError;204 不解析 body */
+/** 统一请求:默认 JSON 头(与调用方传入的 headers 合并,不被整体覆盖);非 2xx 解析 {code,message} 抛 ApiError;204 不解析 body */
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...init,
+    headers: { "Content-Type": "application/json", ...init?.headers },
   });
 
   if (!res.ok) {
