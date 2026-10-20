@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from app.core.errors import AppError, ErrorCode
-from app.data.yahoo import fetch_daily
+from app.data.yahoo import default_downloader, fetch_daily
 
 
 def fake_downloader(rows: list[tuple]):
@@ -19,6 +19,7 @@ def test_empty_raises_no_data() -> None:
     with pytest.raises(AppError) as e:
         fetch_daily("AAPL", date(2023, 1, 1), date(2023, 2, 1), downloader=lambda *a: pd.DataFrame(), warmup_bars=0)
     assert e.value.code == ErrorCode.NO_DATA
+    assert e.value.status == 404
 
 
 def test_multiindex_flattened_and_validated() -> None:
@@ -41,3 +42,17 @@ def test_invalid_symbol_short_circuits() -> None:
         fetch_daily("bad", date(2023, 1, 1), date(2023, 1, 2), downloader=dl, warmup_bars=0)
     assert e.value.code == ErrorCode.INVALID_SYMBOL
     assert called["n"] == 0
+
+
+def test_none_download_maps_to_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    # yfinance 1.7.0 download 返回 Optional[DataFrame]:None 必须映射为空表(→ NO_DATA 404),不得 500
+    import yfinance as yf
+
+    monkeypatch.setattr(yf, "download", lambda *a, **k: None)
+    d0, d1 = date(2023, 1, 2), date(2023, 1, 31)
+    assert default_downloader("AAPL", d0, d1).empty
+
+    with pytest.raises(AppError) as e:
+        fetch_daily("AAPL", d0, d1)
+    assert e.value.code == ErrorCode.NO_DATA
+    assert e.value.status == 404

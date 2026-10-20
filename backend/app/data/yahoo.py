@@ -24,6 +24,8 @@ def default_downloader(symbol: str, start: date, end: date) -> pd.DataFrame:
 
     # yfinance 1.7.0: auto_adjust=True 复权 OHLC、progress=False 静默、end 不含当天故 +1 天。
     df = yf.download(symbol, start=start, end=end + timedelta(days=1), auto_adjust=True, progress=False)
+    if df is None:  # 1.7.0 返回 Optional[DataFrame]:None 映射为空表 → fetch_daily 抛 NO_DATA 404
+        return pd.DataFrame()
     return _flatten_columns(df)
 
 
