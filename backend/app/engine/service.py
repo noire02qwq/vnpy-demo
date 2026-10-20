@@ -136,7 +136,10 @@ def execute_backtest(request: dict[str, Any], *, benchmark_fetcher: Callable | N
     ]
     stat_keys = ("start_date", "end_date", "total_days", "total_trade_count", "total_commission",
                  "total_turnover", "max_drawdown", "return_drawdown_ratio")
-    metrics = {**risk, **{k: _to_jsonable(run.stats[k]) for k in stat_keys if k in run.stats}}
+    # vnpy 美元口径 MDD 改名 max_drawdown_amount,保留风控层小数口径 max_drawdown(spec §7,前端直接消费)
+    stats_out = {("max_drawdown_amount" if k == "max_drawdown" else k): _to_jsonable(run.stats[k])
+                 for k in stat_keys if k in run.stats}
+    metrics = {**risk, **stats_out}
     return BacktestResultData(
         request=request,
         metrics=metrics,

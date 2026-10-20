@@ -128,7 +128,7 @@ D1-D9 详见 task_plan.md 决策表。补充:
 ## 结果装配(Task 16)
 
 - **update_setting 行为证据(1.4.1 template.py:44-50,决定免过滤)**:`CtaTemplate.update_setting` 遍历**策略类声明的 `parameters` 列表**,仅对 `name in setting` 的键 setattr → setting 中的多余键(entry_pct/entry_basis 之于 turtle、fast_period 之于 dca)被**静默忽略、不抛异常**(`__init__` 末尾同样走 update_setting,:47)→ 装配无需按 defaults 键集过滤 `strategy.params`,8 形态共用统一超集参数安全
-- **vnpy stats 实测类型(Task 16 转换依据)**:`start_date/end_date` 为 `datetime.date`(非 str/Timestamp,df.index[0] 赋值后实测)→ `strftime("%Y-%m-%d")`;`total_days/total_trade_count` 为 np.int64 → `int()`;`total_commission/total_turnover/max_drawdown/return_drawdown_ratio` 为 np.float64 → `float()`(max_drawdown 为**负美元额**,-12478.77 实测;风控层 max_drawdown 为正小数被 stats 合并覆盖,契约如此)
+- **vnpy stats 实测类型(Task 16 转换依据)**:`start_date/end_date` 为 `datetime.date`(非 str/Timestamp,df.index[0] 赋值后实测)→ `strftime("%Y-%m-%d")`;`total_days/total_trade_count` 为 np.int64 → `int()`;`total_commission/total_turnover/max_drawdown/return_drawdown_ratio` 为 np.float64 → `float()`(max_drawdown 为**负美元额**,-12478.77 实测;**键冲突已修**:vnpy 美元口径 MDD 改名 `max_drawdown_amount` 并入,风控层正小数 MDD 保留 `max_drawdown` 键名,spec §7 前端直接消费)
 - **brief 代码 bug(沿 Task 14 已证):`t.time.strftime` 必抛 AttributeError**(TradeData 无 `.time`)→ 改 `t.datetime.strftime("%Y-%m-%d")`;brief 的 `Offset` 导入未用已删
 - **校验决策**:仅 BAD_PARAMS 校验 `strategy.type` 存在;tp/sl 缺省由 registry defaults 补齐(tpsl 默认 10/5),不做显式 ≤0 拒绝(缺 key ≠ 非法,决策留档)
 - **entry_basis 语义注意**:装配 `"entry_basis": request 值 or "total"` 按契约统一——API 请求省略 entry_basis 时会覆盖 tpsl registry 默认 "cash"(Task 18 API 层若显式传参则无影响,已留意)

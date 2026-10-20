@@ -32,6 +32,8 @@ def test_execute_backtest_shape() -> None:
     assert out.candles["dates"] == out.curves["dates"]
     assert {"ema_fast", "ema_slow"} <= set(out.candles["overlays"])
     assert out.stats_raw["total_trade_count"] >= 0
+    assert 0 <= out.metrics["max_drawdown"] <= 1  # 风控层小数口径 MDD(spec §7)
+    assert "max_drawdown_amount" in out.metrics  # vnpy 美元口径 MDD(有交易时为负美元额)
     assert all(isinstance(t["price"], float) and t["direction"] in ("buy", "sell") for t in out.trades)
 
 
