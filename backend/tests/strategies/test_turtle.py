@@ -1,0 +1,89 @@
+# tests/strategies/test_turtle.py
+"""经典海龟策略测试:突破 t+1 入场、ATR 单位折算(手算 oracle)、满仓退出、现金守恒。"""
+import math
+
+import pytest
+from vnpy.trader.constant import Direction
+
+from app.engine.runner import CostSettings, run_backtest
+from app.strategies.turtle import TurtleStrategy
+from tests.fixtures.synth import make_bars
+
+CAPITAL = 1_000_000.0
+
+PARAMS = {"entry_days": 20, "exit_days": 10, "atr_days": 14, "risk_pct": 1.0, "max_units": 4, "am_size": 60}
+
+
+def bars_breakout_then_breakdown() -> list:
+    # 60 根 100 横盘 → 20 根 +2/根 上涨(第 61 根即突破 20 日高)→ 20 根 -5/根 暴跌
+    flat = [100.0] * 60
+    up = [100 + i * 2 for i in range(1, 21)]
+    down = [140 - (i + 1) * 5 for i in range(20)]
+    return make_bars(flat + up + down)
+
+
+def wilder_atr_at(bars: list, n: int, upto: int) -> float:
+    """手算 bars[:upto+1] 的 Wilder ATR(n)(入场点 oracle,不依赖 talib)。
+
+    make_bars 的 OHLC 规则:o=昨收、high=round(max(o,c)*1.01,2)、low=round(min(o,c)*0.99,2)。
+    talib.ATR 首值 = 前 n 个 TR 的 SMA,此后 ATR=(prev*(n-1)+TR)/n;已实测与 talib 逐位一致。
+    """
+    trs = [
+        max(
+            bar.high_price - bar.low_price,
+            abs(bar.high_price - bars[j - 1].close_price),
+            abs(bar.low_price - bars[j - 1].close_price),
+        )
+        for j, bar in enumerate(bars[1 : upto + 1], start=1)
+    ]
+    atr = sum(trs[:n]) / n
+    for tr in trs[n:]:
+        atr = (atr * (n - 1) + tr) / n
+    return atr
+
+
+def test_breakout_entry_next_open() -> None:
+    bars = bars_breakout_then_breakdown()
+    run = run_backtest(bars, TurtleStrategy, dict(PARAMS), CAPITAL, CostSettings())
+    trades = run.engine.get_all_trades()
+    assert trades, "突破 20 日高应触发买入"
+    # brief 原文 direction.value == 1 不成立:vnpy Direction 枚举值为中文串,直接比枚举
+    assert trades[0].direction == Direction.LONG
+    assert trades[0].volume >= 1
+    # t+1 开盘成交:决策 bar idx 60(close 102 > 昨日 20 日高 101),成交在 idx 61 open=102
+    assert trades[0].datetime == bars[61].datetime
+    assert trades[0].price == pytest.approx(bars[61].open_price)
+
+
+def test_unit_size_uses_atr() -> None:
+    bars = bars_breakout_then_breakdown()
+    run = run_backtest(bars, TurtleStrategy, dict(PARAMS), CAPITAL, CostSettings())
+    buy = run.engine.get_all_trades()[0]
+    # brief 原断言:下取整特征 + 上界(保留)
+    assert buy.volume == math.floor(buy.volume) and buy.volume <= CAPITAL * 0.01 / 0.5
+    # 强断言(oracle 夹逼→精确):入场 bar idx 60 的 ATR 手算 = 30.02/14 ≈ 2.1442857
+    # (横盘段 TR≡2.0,入场 bar high=103.02/low=99.0/昨收 100 → TR=4.02,
+    #  ATR=(2.0*13+4.02)/14;已实测与 talib.atr 逐位一致)→ unit=floor(1e6*1%/2.1442857)=4663
+    atr_est = wilder_atr_at(bars, PARAMS["atr_days"], 60)
+    assert buy.volume == math.floor(CAPITAL * (PARAMS["risk_pct"] / 100.0) / atr_est)
+    assert buy.volume == 4663
+
+
+def test_stop_loss_full_exit() -> None:
+    bars = bars_breakout_then_breakdown()
+    run = run_backtest(bars, TurtleStrategy, dict(PARAMS), CAPITAL, CostSettings())
+    trades = run.engine.get_all_trades()
+    # brief 原文 direction.value == 1/2 不成立:直接比枚举
+    buys = sum(t.volume for t in trades if t.direction == Direction.LONG)
+    sells = sum(t.volume for t in trades if t.direction == Direction.SHORT)
+    assert buys == sells, "暴跌段应全仓退出(买入总量 == 卖出总量)"
+    assert run.engine.strategy.pos == 0
+    assert not run.engine.active_stop_orders, "退出后不得残留 stop 单"
+
+
+def test_cash_conservation() -> None:
+    bars = bars_breakout_then_breakdown()
+    run = run_backtest(bars, TurtleStrategy, dict(PARAMS), CAPITAL, CostSettings())
+    st = run.engine.strategy
+    expected = CAPITAL + run.stats["total_net_pnl"] - abs(st.pos) * bars[-1].close_price
+    assert st.cash == pytest.approx(expected, abs=1e-6)

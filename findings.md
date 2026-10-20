@@ -90,3 +90,11 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **brief 死叉兜底数据 bug:110 横盘永不死叉零卖出**——上涨后横盘时 EMA3 恒高于 EMA10(快线收敛更贴近价格),`f0>=s0 and f1<s1` 永假;改为温和回落至 **105 横盘**(low=103.95>95.95 不触 SL、high=111.1<121.2 不触 TP),死叉在横盘第 2 根出现并兜底清仓
 - **金叉建仓用 entry_basis=cash + 急跌形态时现金会短暂为负**(990 股@101 全仓 + 费滑 ≈ -99.89):plan_shares 只按决策收盘价约束股数,引擎无资金检查全额成交;与 cross 一致,不影响现金守恒恒等式(实测误差 0)
 - **tpsl 注册表默认值取已验证配置**(entry_basis=cash、am_size=30、tp=10/sl=5),与 brief 类默认(am_size=100)略有出入:am_size=30 预热更快且为测试实参;3 条 cross 条目逐字节不变(JSON 对比验证)
+
+## 策略层(Task 12)
+
+- **ArrayManager 内省(vnpy 4.5 实测)**:`donchian(n, array=False)` 默认返回 `(up[-1], down[-1])` 标量对(talib.MAX/MIN 末值)、`atr(n, array=False)` 返回标量 `result_array[-1]` → brief 代码 `entry_up[-2]`/`atr[-1]` 对标量下标必崩(TypeError);适配为 `array=True` 取 ndarray,`[-2]` 即昨日通道、`[-1]` 即当根 ATR,行为意图不变
+- **on_trade 现金核算按 Task 11-13 统一标准补 slip 项**(brief 版漏记滑点):`slip=volume*getattr(engine,"size",1)*getattr(engine,"slippage",0.0)`,买 `-cost-fee-slip`、卖 `+cost-fee-slip`;现金守恒恒等式 1e-6 内精确成立(实测 total_net_pnl=259835.42 与 cash 严丝合缝)
+- **入场点手算 oracle(测试强断言)**:入场 bar=idx 60(close 102 > 昨日 20 日高 101);横盘段 TR≡2.0(high-low=2)、入场 bar TR=max(4.02,3.02,1.0)=4.02 → ATR=(2.0*13+4.02)/14=30.02/14≈2.1442857,与 talib.atr 逐位相等(已实测);unit=floor(1e6*1%/2.1442857)=4663 精确断言(4 单加仓 4663/4422/4257/4153,共 17495)
+- **brief 数据注释 bug:"暴跌触发 2N 止损" 实际不成立**——10 日通道下破先于 2N 止损发生(决策 bar idx 83:close 120 < exit_low_prev 123.75,而 stop=108-2*ATR≈102.93 从未被 low≤118.8 触及)→ 全平走 cancel_all+限价卖,成交 max(114.0, open 120)=120;测试名 `test_stop_loss_full_exit` 保留(意图=暴跌全平),断言 buys==sells + pos==0 + 无残留 stop 单
+- **registry 扩展保持原 6 条目逐字节不变**(git diff 仅增行):`turtle` 条目 `signal=None`、`kind/mode="turtle"`,defaults 键集合 == `TurtleStrategy.parameters` 集合(程序化断言);defaults 取测试实参配置(atr_days=14、am_size=60;类默认 am_size=100)
