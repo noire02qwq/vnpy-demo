@@ -48,3 +48,15 @@ def v_shape_closes(n: int = 240, trough: float = 0.5) -> list[float]:
     down = [round(100.0 * (1 - (1 - trough) * i / half), 4) for i in range(half)]
     up = [round(100.0 * trough * (1 + 0.9 * i / half), 4) for i in range(half)]
     return down + up
+
+
+def round_trip_closes(n: int = 240) -> list[float]:
+    """跌→涨→跌往返形态:涨段出金叉建仓,跌段出死叉清仓,期末空仓。
+
+    V 形(先跌后涨)只有一次金叉、涨段单调无死叉,验证不了全仓退出;
+    本形态补上尾段下跌,使金叉→死叉完整走一遍。
+    """
+    down1 = linear_closes(70, 100.0, -0.6)  # 100 → 58.6
+    up = linear_closes(90, 58.0, 0.9)  # 58 → 137.2(金叉在 78)
+    down2 = linear_closes(80, 136.4, -0.7)  # 136.4 → 80.6(死叉在 169)
+    return (down1 + up + down2)[:n]

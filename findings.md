@@ -72,3 +72,12 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - `set_parameters` 的 `fixed` 守卫生效:1.4.1 无该参数,kwargs 不含 fixed,成本模型为 rate+slippage;`calculate_statistics` 返回 28 键,`total_trade_count` 为 np.int64(与 int 比较成立)
 - 引擎 `output` 在 calculate_statistics 开头无条件打印一行(仅内部逐项受 output=False 控制),FastAPI 侧接入时日志噪声可接受
 - ruff 0.17.1 默认规则集比 0.8 宽(触发 I001/C408/RUF012):runner 的 kwargs 改 dict 字面量、import 排序;测试策略的 `parameters/variables` 按 CtaTemplate 惯例必须为类属性,用 `ClassVar[list]` 注解满足 RUF012,不改 vnpy 语义
+
+## 策略层(Task 10)
+
+- **`Direction` 枚举值是中文串非整数**:`Direction.LONG.value == "多"`、`SHORT.value == "空"`(vnpy/trader/constant.py:10-15)→ brief 测试的 `t.direction.value == 1/2` 必错,改为直接比枚举 `t.direction == Direction.LONG/SHORT`
+- **brief 数据形态 bug:V 形(先跌后涨)走不出死叉平仓**——涨段单调 EMA5/20 金叉后不再回落,后验 warmup 期唯一 cross 事件就是金叉(V 形 240 根实测:唯一 cross = idx 130 金叉,零卖出)→ `test_death_cross_exits_full` 在 V 形上恒失败;新增 `round_trip_closes`(跌70→涨90→跌80)使金叉(idx 78)→死叉(idx 169)完整往返、期末空仓
+- **oracle 与策略滚动窗口对齐**:`first_cross_index` 用全序列 EMA,策略用 am_size=40 窗口 EMA(每窗重播种),往返形态上两者同 bar 出信号(78/169 各自吻合);若换数据后二者错位,优先查窗口播种效应
+- **现金守恒恒等式仅在 slippage=0 时精确**:`calculate_pnl` 把逐笔滑点 `volume*size*slippage` 计入 net_pnl(backtesting.py:1119)但成交价不含滑点(`min/max(order_price, open)`,backtesting.py:722-725),策略现金按成交价记账 → 恒等式差 Σslippage(默认 0.01×~1530 股×2 笔 ≈ 30,远超 1e-6);测试用 `CostSettings(slippage=0.0)`,rate 佣金双边公式一致(`turnover*rate*size` vs `cost*rate`,size=1)仍参与核对
+- 成交量断言不受 t+1 开盘价影响:`plan_shares` 的现金约束也用决策收盘价折算,引擎无资金约束全额成交 → `volume == int(CAPITAL/close_t)` 恒成立
+- `ArrayManager(size=N)` 需 N 根才 inited → am_size 必须 ≪ 数据长度(240 根数据 am_size=240 时仅最后一根有效,零交易)
