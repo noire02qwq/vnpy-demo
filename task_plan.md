@@ -29,7 +29,7 @@
 ### Phase 1:仓库与规范 — Status: in_progress
 - [x] git init + remote origin(SSH)+ 首次提交推送(9df9afc)
 - [x] CLAUDE.md 规范文档(目录/命名/提交/测试/文档树约定)
-- [ ] 工程骨架:backend(uv + Python 3.12)+ frontend(Expo)+ docker/ 编排
+- [x] 工程骨架:backend(uv + Python 3.12)+ frontend(Expo)(docker/ 在 M6)
 
 ### Phase 2:设计 spec 与评审 — Status: complete
 - [x] docs/superpowers/specs/2026-10-20-vnpy-backtest-demo-design.md
@@ -47,7 +47,7 @@
 - [x] 策略:MACD / KDJ / 双EMA 金死叉 ×(金死叉对卖 | 金叉买+固定止盈止损)+ 海龟 + 定投(Task 10-13,registry 8 形态,51 测试绿)
 - [x] 指标:总收益/年化/Alpha/MDD/波动率/Beta/夏普/信息比率 + ^GSPC 基准对比曲线(初始归零)(Task 15,57 测试绿)
 - [x] FastAPI API(拉数/回测/历史)+ SQLite 落库(Task 16-18,68 测试绿)
-- [ ] RN 前端:回测配置页 / 结果页(TradingView K线+指标+三线对比)/ 历史页
+- [x] RN 前端:回测配置页 / 结果页(TradingView K线+指标+三线对比)/ 历史页(F0-F7,102 测试绿+端到端冒烟)
 - [ ] Docker:backend 镜像 + frontend(web)镜像,可分别构建运行
 - [ ] 文档树完善(docs/ 结构化)
 
