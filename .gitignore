@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.coverage
+coverage.xml
+htmlcov/
+
+# Node / Expo
+node_modules/
+.expo/
+web-build/
+*.tsbuildinfo
+
+# Env & IDE
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea/
+.vscode/
+
+# Local runtime data
+*.sqlite3
+*.db
+data/cache/
