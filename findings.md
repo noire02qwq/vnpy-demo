@@ -81,3 +81,12 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **on_trade 现金核算标准(含滑点,Task 11-13 统一)**:`calculate_pnl` 把逐笔滑点 `volume*size*slippage` 计入 net_pnl(backtesting.py:1119)但成交价不含滑点(`min/max(order_price, open)`,backtesting.py:722-725)→ 策略现金须记同一笔:`slip = trade.volume * getattr(engine,"size",1) * getattr(engine,"slippage",0.0)`;买入 `cash -= cost+fee+slip`、卖出 `cash += cost-fee-slip`(评审方案 ii,已实测)。如此 `cash == CAPITAL + net_pnl − |pos|*last_close` 在任意成本设置下精确成立;仅按价格记账会差 Σslippage(默认 0.01×~1530 股×2 笔 ≈ 30,远超 1e-6)。rate 佣金双边公式天然一致(`turnover*rate*size` vs `cost*rate`,size=1)
 - 成交量断言不受 t+1 开盘价影响:`plan_shares` 的现金约束也用决策收盘价折算,引擎无资金约束全额成交 → `volume == int(CAPITAL/close_t)` 恒成立
 - `ArrayManager(size=N)` 需 N 根才 inited → am_size 必须 ≪ 数据长度(240 根数据 am_size=240 时仅最后一根有效,零交易)
+
+## 策略层(Task 11)
+
+- **BAR 模式撮合时序(backtesting.py:649-656)**:每根 bar 先 `cross_limit_order` → `cross_stop_order` → 才 `strategy.on_bar`,故 on_bar/on_trade 里下的单最早在**下一根** bar 撮合;但同 bar 内 limit 段先于 stop 段,stop 段遍历的是 limit 段结束后的 `active_stop_orders` 快照 → 限价单成交回调 on_trade 里 `cancel_all()` 能拦截残留 stop 单**在同一根 bar** 继续撮合(TP 成交后 SL 不会同 bar 误触发,已实测 active_stop_orders 清空)
+- **stop 单语义(1.4.1 backtesting.py:744-798)**:空头 stop 触发条件 `stop_price >= bar.low_price`,成交价 `min(stop_price, bar.open_price)`;限价空头为 `high >= 委托价` 触发、成交价 `max(委托价, open)`;两类成交价都**不含滑点**,滑点只在净值侧扣(:1119)→ 止损成交价可精确断言 `== round(entry*0.95, 2)`(±0.01),止盈跳空成交价恰为 TP 本身(不追高开盘价)
+- **brief 止损数据 bug:温和阴跌(-2/根)走不出止损**——从 110 下跌需 7 根才触及 SL=95.95,EMA3/10 死叉在 close=104(bar 52)先发生,走了死叉兜底、卖出 98.8,`sell <= buy*0.95` 断言必挂;改 **-8/根急跌**:第 2 根 low=93.06 < 95.95 即触发 stop(成交 95.95),死叉来不及形成
+- **brief 死叉兜底数据 bug:110 横盘永不死叉零卖出**——上涨后横盘时 EMA3 恒高于 EMA10(快线收敛更贴近价格),`f0>=s0 and f1<s1` 永假;改为温和回落至 **105 横盘**(low=103.95>95.95 不触 SL、high=111.1<121.2 不触 TP),死叉在横盘第 2 根出现并兜底清仓
+- **金叉建仓用 entry_basis=cash + 急跌形态时现金会短暂为负**(990 股@101 全仓 + 费滑 ≈ -99.89):plan_shares 只按决策收盘价约束股数,引擎无资金检查全额成交;与 cross 一致,不影响现金守恒恒等式(实测误差 0)
+- **tpsl 注册表默认值取已验证配置**(entry_basis=cash、am_size=30、tp=10/sl=5),与 brief 类默认(am_size=100)略有出入:am_size=30 预热更快且为测试实参;3 条 cross 条目逐字节不变(JSON 对比验证)
