@@ -63,3 +63,12 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **brief 自相矛盾两处(实测发现,已修正并记录)**:
   1. `test_multiindex_flattened_and_validated` 注入返回 MultiIndex 列的假 downloader,但 brief 实现只在 `default_downloader` 里拍平(测试已绕过它)→ 校验层看到 tuple 列直接报「缺列」。修正:抽 `_flatten_columns` helper,`fetch_daily` 在 validate 前也拍平(`default_downloader` 契约不变)
   2. 同一测试 `warmup_bars=10` 只有 15 行,而 Task 3 已上线的 validate 硬闸门要求 `warmup_bars+10`=20 行,brief 原样必失败。修正:测试改 `warmup_bars=5`(15≥15,意图不变:拍平+全链路校验通过),validate.py 一字未动
+
+## vnpy 回测驱动(Task 7)
+- **直注路径成立,无需 B 方案**:`run_backtesting`(1.4.1 backtesting.py:216-249)只遍历 `history_data`,不调 `load_data`、不读 `self.days`(`self.days` 仅在 __init__ 初始化,回测链路零引用)→ `engine.history_data = list(bars)` 直注后直接 run_backtesting 即可,monkeypatch `load_bar_data` 的 fallback 未触发
+- **brief 测试代码 bug:`TradeData` 无 `time` 字段**(vnpy/trader/object.py:154-175,只有 `datetime`;`self.time` 在 object.py:229 属于 LogData)→ `trade.time.date()` 必抛 AttributeError;改为 `trade.datetime.date()`,行为意图不变(成交日期 = 触发 bar 的下一根)
+- **t+1 成交语义实测确认**:触发 bar idx 6(close 106>105,委托价 111.3)→ 成交 datetime = bars[7] 2023-01-09 00:00,price = min(111.3, 次日开盘 106.0) = 106.0,volume 1,`strategy.pos`=1;new_bar 顺序 = 先 cross 后 on_bar(backtesting.py:649-656),与尽调结论一致
+- 日 K datetime 为 00:00,成交 datetime 直接取 bar.datetime,同日比较无时区/时刻噪声,无需归一化
+- `set_parameters` 的 `fixed` 守卫生效:1.4.1 无该参数,kwargs 不含 fixed,成本模型为 rate+slippage;`calculate_statistics` 返回 28 键,`total_trade_count` 为 np.int64(与 int 比较成立)
+- 引擎 `output` 在 calculate_statistics 开头无条件打印一行(仅内部逐项受 output=False 控制),FastAPI 侧接入时日志噪声可接受
+- ruff 0.17.1 默认规则集比 0.8 宽(触发 I001/C408/RUF012):runner 的 kwargs 改 dict 字面量、import 排序;测试策略的 `parameters/variables` 按 CtaTemplate 惯例必须为类属性,用 `ClassVar[list]` 注解满足 RUF012,不改 vnpy 语义
