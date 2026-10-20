@@ -52,3 +52,14 @@ D1-D9 详见 task_plan.md 决策表。补充:
 
 ## 环境大版本风险(Task 0 评审补充,2026-10-20)
 - 锁定结果含大版本跳级:pandas **3.0.6**、numpy 2.5.4、pytest 9.1.1、sqlalchemy 2.1.5、fastapi 0.150。pandas 3.0 的 CoW/字符串 dtype 变化对数据层(校验/缓存/BarData 转换)影响最大,相关任务以「测试先行+实际行为为准」处理,勿照抄 pandas 2 时代姿势。
+
+## yfinance 1.7.0 API(Task 5, 2026-10-20 内省)
+- `yf.download` 在 1.7.0 仍存在,签名:
+  `(tickers, start=None, end=None, actions=False, threads=True, ignore_tz=None, group_by='column', auto_adjust=True, back_adjust=False, repair=False, keepna=False, progress=True, period='1mo if start & end None', interval='1d', prepost=False, rounding=False, timeout=10, session=None, multi_level_index=True) -> Optional[pandas.DataFrame]`
+- **brief 的 `default_downloader` 片段在 1.7.0 下几乎原样可用**:`auto_adjust` 仍在(且 1.7.0 默认即 True,显式传 True 与 0.2.x 语义一致=复权 OHLC);`progress` 仍在(传 False 静默);`start/end` 语义不变(end 不含当天,故仍需 `end+1天`)
+- **1.7.0 新增 `multi_level_index=True`(默认)**:单标的也返回 MultiIndex 列(Price, Ticker),与 0.2.x 后期行为一致 → 保留 brief 的 `isinstance(df.columns, pd.MultiIndex)` 取第一层 guard 即可,无需显式传该参数(guard 两种情况都兜住)
+- 返回类型 `Optional[DataFrame]`(1.7.0 显式标注可能返回 None)→ `fetch_daily` 的 `df is None or df.empty` 空值双保险是必要的
+- 实现偏离 brief 之处:仅将 `fetch_daily` 内部的 `from app.core.errors import ...` 提升到模块顶部(任务允许);其余按 brief 原样。测试仍注入假 downloader,零联网、不依赖 yfinance 内部
+- **brief 自相矛盾两处(实测发现,已修正并记录)**:
+  1. `test_multiindex_flattened_and_validated` 注入返回 MultiIndex 列的假 downloader,但 brief 实现只在 `default_downloader` 里拍平(测试已绕过它)→ 校验层看到 tuple 列直接报「缺列」。修正:抽 `_flatten_columns` helper,`fetch_daily` 在 validate 前也拍平(`default_downloader` 契约不变)
+  2. 同一测试 `warmup_bars=10` 只有 15 行,而 Task 3 已上线的 validate 硬闸门要求 `warmup_bars+10`=20 行,brief 原样必失败。修正:测试改 `warmup_bars=5`(15≥15,意图不变:拍平+全链路校验通过),validate.py 一字未动
