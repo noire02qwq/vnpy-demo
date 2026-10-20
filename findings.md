@@ -134,3 +134,13 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **entry_basis 语义注意**:装配 `"entry_basis": request 值 or "total"` 按契约统一——API 请求省略 entry_basis 时会覆盖 tpsl registry 默认 "cash"(Task 18 API 层若显式传参则无影响,已留意)
 - **compute_risk_metrics 传参**:显式传 `annual_days=Settings.annualization_days` + `risk_free_rate=Settings.risk_free_rate`(settings 有 annualization_days=250,与默认一致);全产物 json.dumps round-trip 实测通过
 - **测试**:brief Step 1 + 追加 macd sub(dif/dea/hist)与 turtle overlays/sub 双空,共 3 个新测试;全量 60 passed(57 基线 + 3),`svc._load_symbol_bars` monkeypatch try/finally 还原
+
+## API 层(Task 18)
+
+- **session factory 不走 lifespan**:starlette 1.9 的 `TestClient(app)` 无 `with` 不触发 lifespan 事件,`app.state` 方案必 AttributeError → 改 `app.main.get_session_factory()`(每请求直调 `init_session_factory(data/backtest.db)`,SQLite 廉价);路由经 `deps.resolve_session_factory`(Annotated Depends)在**请求期**解析 `app.main.get_session_factory` 模块属性——导入期 `from app.main import` 捕获的函数引用会绕过 monkeypatch,必须模块属性延迟解析
+- **POST /backtests 响应显式挑 5 字段**(request/metrics/curves/candles/trades),stats_raw 含 vnpy 原生对象非 JSON 安全且不在 spec §8 契约;max_drawdown(0..1)+ max_drawdown_amount(美元)双口径同在 metrics,与 Task 16 契约一致
+- **422→400**:pydantic/FastAPI 校验失败默认 422,与 spec §8 错误模型不符 → errors.py 增 `RequestValidationError` handler 转 400 BAD_PARAMS;detail 只留 loc/msg(pydantic v2 的 `exc.errors()` ctx 可能含异常对象,直接 jsonable 会炸)
+- **单一事实源**:`StrategySpec.type: Literal[STRATEGY_TYPES]` 的元组直接 `tuple(STRATEGY_REGISTRY)`,meta 端点与请求白名单天然同源;entry_pct (0,100] 校验用 model_validator 仅对 6 个信号形态生效;CostConfig 无 commission_fixed(spec 已移除),service 侧从 settings 补缺省
+- **ruff B008**:`Depends(...)` 作默认值被禁 → `FactoryDep = Annotated[sessionmaker, Depends(...)]` 别名;注意 Annotated 参数无默认值,**必须放在 Query 等带默认值参数之前**(Python 语法限制,非 FastAPI 限制)
+- **data/fetch 语义**:仅"验证标的可拉+摘要"——`check_symbol` 前置(INVALID_SYMBOL 400)、warmup=0、空 bars → NO_DATA 404;`cache_hit` 恒 false(bars 未透出来源,YAGNI 留档)
+- **测试**:4 个新测试(run_and_history/bad_type_400/meta_strategies/data_fetch),全量 **66 passed**(62 基线 + 4),ruff 全绿;手动冒烟另验 DELETE/GET 未知 id → 404 RUN_NOT_FOUND、entry_pct 150/warmup 5/commission_fixed → 400、openapi.json 6 路径齐全
