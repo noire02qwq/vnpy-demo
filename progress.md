@@ -61,3 +61,10 @@
 - [x] Commit `feat(docker): M6 验收收尾(goal 达成)` + push origin main
 
 **终局判定**:goal 达成(功能全部支持 + 后端 105/前端 109 测试全绿 + 镜像可构建运行 + compose 真实回测);两项人工/后续项如实挂账:浏览器端到端人工联调待用户验证,Electron dist 模式跨路由导航失败列为后续兜底项(dev/http 托管形态不受影响)。
+
+## 终局(2026-10-20,goal 达成)
+
+- 终检复跑(控制器亲测):backend `105 passed` + ruff 全绿;frontend `109 passed/7 suites` + tsc exit 0
+- Electron dist 站内导航缺陷已修(f01a7c6 内嵌静态服务,http 源 + SPA fallback 实证)
+- 验收清单全勾(浏览器人工联调一项待用户);两轮全分支终审(后端 opus + 前端 opus)findings 全部闭环
+- 全程提交推送至 git@github.com:noire02qwq/vnpy-demo.git(main)
