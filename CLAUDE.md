@@ -45,8 +45,8 @@ vn-demo/
 │   │   ├── api/         # 类型化客户端(openapi-typescript 生成 schema.ts)
 │   │   ├── components/  # 通用 UI
 │   │   └── charts/      # LightweightCharts 封装(web 直用,native 走 WebView)
-│   ├── desktop/         # Electron 壳(加载 web build)
 │   └── __tests__/       # jest + @testing-library/react-native
+├── desktop/             # Electron 壳(加载 web build 或 dev server)
 └── docker/
     ├── backend.Dockerfile
     ├── frontend.Dockerfile
