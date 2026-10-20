@@ -107,3 +107,12 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **现金硬约束语义(brief 防护,测试已验)**:`if self.cash < bar.close_price: return` + `shares=floor(min(amount, cash)/close)` → 现金不足额定但够 1 股时按能力部分买入;weekly 10k/amount500 场景共 24 笔(≥brief 阈值 20),biweekly 14 笔(≥10)
 - **ISO 锚定**:200 根自 2022-01-03(ISO 周 1 周一)止于 07-22(周 29),暖机 10 根落在周 2 周中 → 首笔当周即买("区间起点锚定"语义),周 2..29 全有买入;biweekly 的 `(year, week//2)` 跨年边界 demo 可接受(本测试数据不跨年,未暴露)
 - 现金守恒恒等式 1e-6 精确成立(期末 pos>0);registry 原 7 条目仅增行,`dca` defaults 取测试验证配置(am_size=10),键集合 == parameters 集合
+
+## 曲线导出(Task 14)
+
+- **`daily_results` 结构证据(1.4.1 backtesting.py)**:实例属性 `dict[Date, DailyResult]`(:93,`Date = datetime.date`,:1-7),键为 **date 非 datetime**;每根 bar 经 `new_bar → update_daily_close(bar.close_price)` 建条目(:641-647,:649-656)→ **逐 bar 一条**(240 bars → 240 条,实测),无成交日也有条目。`DailyResult` 含 `close_price/net_pnl/end_pos/start_pos/trading_pnl/holding_pnl`(:1056-1078)→ brief 取数结构成立,`daily_pnl.get(b.datetime.date(), 0.0)` 无需归一化。`dir(BacktestingEngine)` 只列 `get_all_daily_results/update_daily_close`——`daily_results` 是实例属性,运行时才存在,不影响使用
+- **brief 代码 bug(沿 Task 7 已证):`t.time.date()` 必抛 AttributeError**(TradeData 无 `.time`,object.py:154-175)→ 改 `t.datetime.date()`
+- **契约以事实书为准**:brief Interfaces 行写 `benchmark_placeholder: None`,其 Step 3 代码与事实书公共契约一致为 `Curves(dates, equity, position_value, cash)` 4 字段 → 按 4 字段实现,benchmark 留 Task 15 接
+- **端点 oracle 实测**:round_trip_closes(240)+Task 10 PARAMS(ema 5/20、entry_pct 100、total、am_size 40)→ 恰 2 笔成交(LONG 1533 @2023-03-22 / SHORT 1533 @2023-06-21),`strategy.cash − Σnet_pnl = CAPITAL` 精确(期末空仓)→ 断言 `cash[-1] ≈ strategy.cash`(abs 1e-6)通过,与 Task 13 恒等式互证
+- **枚举值勘误**:实测 `Direction.LONG.value == 'Long'`(非 Task 10 记录的 '多',vnpy 4.5.0 实装值);曲线层用枚举直比不受影响,后续任何依赖 `.value` 的代码以 'Long'/'Short' 为准
+- **格式门禁为 `ruff check`**:仓库 23 个既有文件不满足 `ruff format`(含 runner/strategies),格式化非门禁;新文件与现有风格一致
