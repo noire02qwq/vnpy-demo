@@ -29,7 +29,7 @@
 | D2 | FastAPI 程序化驱动 `vnpy_ctastrategy.backtesting.BacktestingEngine`(无 GUI、无 EventEngine/MainEngine/Gateway) |
 | D3 | Expo 一套代码覆盖 iOS+Android+Web;桌面 = Electron 加载 web build;图表 TradingView Lightweight Charts |
 | D4 | 信号源三选一(MACD/KDJ/双指定 EMA);EMA 快慢周期用户指定 |
-| D5 | 默认成本:佣金率 0.1%/笔 + 滑点 0.01 美元/股(vnpy slippage 语义为**每股绝对值**,非比率);佣金率/固定佣金/滑点全部可配 |
+| D5 | 默认成本:佣金率 0.1%/笔 + 滑点 0.01 美元/股(vnpy slippage 语义为**每股绝对值**,非比率);佣金率/滑点可配。**不含固定佣金/笔**——vnpy_ctastrategy(实钉 1.4.1,PyPI 无 1.5.0,tag diff 无 API 差异)引擎不支持,策略侧自扣会致资金曲线失真(Task 0 内省证实) |
 | D6 | 海龟 = 经典 ATR 单位制,不受百分比规则约束;百分比规则仅适用于信号形态 |
 | D7 | 定投 = 固定金额 + 间隔(每周/每两周/每月首个交易日),持有到期 |
 | D8 | 回测同步返回 + SQLite 落库可查历史 |
@@ -170,7 +170,7 @@ run_backtesting() → calculate_result() → stats = calculate_statistics()
     "entry_basis": "total | cash"
   },
   "benchmark_symbol": "^GSPC",
-  "cost": { "commission_rate": 0.001, "commission_fixed": 0.0, "slippage": 0.01 },
+  "cost": { "commission_rate": 0.001, "slippage": 0.01 },
   "warmup_bars": 100
 }
 ```
