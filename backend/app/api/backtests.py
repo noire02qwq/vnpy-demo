@@ -24,7 +24,8 @@ FactoryDep = Annotated[sessionmaker[Session], Depends(resolve_session_factory)]
 
 @router.post("/backtests")
 def run_backtest(req: BacktestRequest, factory: FactoryDep) -> dict:
-    result = svc.execute_backtest(req.model_dump())  # AppError → 统一 handler,其余异常 → 500 INTERNAL
+    # mode="json":start/end 序列化回 ISO 字符串,service 层 date.fromisoformat 才不炸
+    result = svc.execute_backtest(req.model_dump(mode="json"))  # AppError → 统一 handler,其余异常 → 500 INTERNAL
     run_id = uuid.uuid4().hex
     with factory() as s:
         save_run(s, result, run_id)

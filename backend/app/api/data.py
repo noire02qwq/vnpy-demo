@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/v1")
 def fetch_data(req: FetchRequest) -> dict:
     """小 warmup(0)拉取,仅回摘要;AppError(NO_DATA 等)自然冒泡到统一 handler。"""
     check_symbol(req.symbol)
-    bars = svc._load_symbol_bars(req.symbol, req.start, req.end, 0)
+    bars = svc._load_symbol_bars(req.symbol, req.start.isoformat(), req.end.isoformat(), 0)
     if not bars:
         raise AppError(ErrorCode.NO_DATA, "区间内无数据", status=404, detail={"symbol": req.symbol})
     return {

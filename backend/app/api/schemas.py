@@ -1,8 +1,9 @@
 # app/api/schemas.py
 """API 请求模型(spec §8 契约):校验失败经 main 装配统一转 400 BAD_PARAMS。"""
+from datetime import date
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.strategies.registry import STRATEGY_REGISTRY
 
@@ -26,15 +27,17 @@ class StrategySpec(BaseModel):
 
 
 class CostConfig(BaseModel):
-    # spec §8 已移除 commission_fixed:service 侧从 settings 缺省补齐,API 不暴露
+    # spec §8 已移除 commission_fixed;extra="forbid" 让未知键显式 400 而非静默忽略
+    model_config = ConfigDict(extra="forbid")
+
     commission_rate: float = Field(default=0.001, ge=0)
     slippage: float = Field(default=0.01, ge=0)
 
 
 class BacktestRequest(BaseModel):
     symbol: str
-    start: str
-    end: str
+    start: date  # pydantic 自动 ISO 解析,非法日期 → 422 → 统一转 400 BAD_PARAMS
+    end: date
     initial_capital: float = Field(gt=0)
     strategy: StrategySpec
     benchmark_symbol: str = "^GSPC"
@@ -44,5 +47,5 @@ class BacktestRequest(BaseModel):
 
 class FetchRequest(BaseModel):
     symbol: str
-    start: str
-    end: str
+    start: date
+    end: date

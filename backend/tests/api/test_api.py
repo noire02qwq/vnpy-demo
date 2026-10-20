@@ -51,6 +51,20 @@ def test_bad_type_400(client) -> None:
     assert r.json()["code"] == "BAD_PARAMS"
 
 
+def test_bad_date_400(client) -> None:
+    r = client.post("/api/v1/backtests", json=dict(BODY, start="not-a-date"))
+    assert r.status_code == 400
+    assert r.json()["code"] == "BAD_PARAMS"
+
+
+def test_cost_unknown_key_400(client) -> None:
+    # spec §8 已移除 commission_fixed:未知键显式 400,不静默忽略
+    cost = {"commission_rate": 0.001, "slippage": 0.01, "commission_fixed": 1.0}
+    r = client.post("/api/v1/backtests", json=dict(BODY, cost=cost))
+    assert r.status_code == 400
+    assert r.json()["code"] == "BAD_PARAMS"
+
+
 def test_meta_strategies(client) -> None:
     r = client.get("/api/v1/meta/strategies")
     types = {s["type"] for s in r.json()["strategies"]}
