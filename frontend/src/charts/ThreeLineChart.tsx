@@ -1,5 +1,5 @@
 /**
- * 三线对比图(总资金/持仓资金/S&P500,首值归零起点),web/native 同构:
+ * 三线对比图(总资金/持仓资金/S&P500,基准线为首值 0.0 的累计收益率;equity/position 为绝对资金额),web/native 同构:
  * 内部复用 LightChart 的 lines 模式(import "./LightChart" 经 Metro 平台扩展
  * 解析到 LightChart.web/native 对应实现),并附图例文字标签。
  */
