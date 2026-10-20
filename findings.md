@@ -221,3 +221,14 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **RNTL v14 异步纪律(F4 教训复现并遵守)**:`await render(...)` / `await fireEvent.*` 全覆盖;pending promise 构造加载态(永不 resolve 的 mock)使「加载中」分支确定性可测,避免竞态。
 - **web 导出冒烟**:`CI=1 npx expo export -p web` 三页全过(静态路由 /、/history、/result/[id]、/_sitemap、/+not-found 各 22KB),typed routes 未生成 .expo/types 时 Href 回退 `string | HrefObject`,`href="/history"` 与模板串 `router.push(\`/result/${id}\`)` 均 tsc 直过。
 - **测试规模**:82 → 102(+20:formatMetric 6 / METRIC_LABELS 1 / MetricCards 1 / 配置页 4 / 结果页 4 / 历史页 4);suites 6 → 7;`npx tsc --noEmit` exit 0,零 any。
+
+## 前端(F6)
+
+任务:Electron 桌面壳(2026-10-20)。状态:完成,dist 模式冒烟实测通过。决策与偏差记录:
+
+- **`loadFile` 相对路径基准是 app 根目录(main.js 所在目录),不是 cwd(实测两连坑)**:brief 的 `DESKTOP_URL=../dist/index.html` 实测解析到 `vn-demo/dist/index.html`(ERR_FILE_NOT_FOUND)——Electron 对 `loadFile(相对路径)` 按 app 路径(此处即 `desktop/`,因为启动方式是 `electron ../desktop/main.js`)解析,与 npm scripts 的 cwd(frontend/)无关;改 `./dist/index.html` 又落到 `desktop/dist/`。最终方案:main.js 显式 `win.loadFile(path.resolve(__dirname, target))` 锚定 main.js 所在目录(比依赖 app-path 语义更确定性,不受启动方式影响),script 传 `DESKTOP_URL=../frontend/dist/index.html`(相对 desktop/ → frontend/dist)。冒烟证据:Electron `--remote-debugging-port=9223` 后 `curl /json/list` 返回 page target `url=file:///…/frontend/dist/index.html`,加载成功无 `Failed to load URL` 告警。
+- **desktop/ 位置在仓库根**(与 frontend 平级,按 CLAUDE.md 目录树),非 brief 原文暗示的 frontend/desktop;frontend scripts 因此为 `electron ../desktop/main.js`。
+- **未引入 cross-env**:brief Step 1 写 `cross-env DESKTOP_URL=…`;npm scripts 实际跑在 sh,`VAR=x cmd` 内联可用,项目 macOS 优先,免依赖,Windows 支持留待需要时加。
+- **electron 44.9.1(devDep `^44.9.1`)**:npm 11.19 下载二进制正常;注意 agent 沙箱环境默认注入 `ELECTRON_RUN_AS_NODE=1`,electron 二进制会退化成纯 Node(`--version` 打的是 Node v24.22.0 而非 Electron v44.9.1),冒烟/日常运行须 `env -u ELECTRON_RUN_AS_NODE`。
+- **window-all-closed 全平台 quit(darwin 不保留)**:按 brief 简化处理,个人研究项目无需 dock 常驻语义。
+- **测试规模**:102 → 102(无新增测试:main.js 为薄壳,无可单测纯逻辑,验证以语法兜底 + DevTools 协议冒烟代替);全量 jest 7 suites 102 passed 不变。
