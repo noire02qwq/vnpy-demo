@@ -364,3 +364,10 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **版本配对实锤**:react-native-macos@0.83.0 peer 要求 `react-native@0.83.10`(非 0.83.0!模板默认钉 0.83.0 必 eresolve)→ 升 0.83.10 后 macos-init 一次通过,生成 macos/ 工程(pod install + run-macos 指引)
 - **rnr CLI 1.0.0 定论**:交互式 TUI、无 add 子命令面,不适合脚本化落组件 → **采备路径:自研轻量组件**(计划 Task 5/6 已含完整实现,shadcn API 风格:cn 工具 + variants 映射 + uniwind className),不引 react-native-reusables 运行时依赖
 - Task 4(token 体系)TDD 完成:monoFontFor 纯函数(平台映射 android=monospace/ios+macos=Menlo/web=等宽栈)+ cn 工具;120 passed / 9 suites / tsc 0(教训:Platform.OS 是普通值属性,`spyOn(Platform,"OS","get")` 不可用 → 测纯函数优于 mock 平台)
+
+## S0b spike 终局 + screens 抽取(2026-10-21)
+
+- **RN-macOS 0.83 构建全链路打通**:AppDelegate.swift 模板坑(let 属性在 super.init() 后赋值 → "may only be initialized once",挪到 super.init() 前修复)后 `xcodebuild -scheme vndemodesktop-macOS build` **exit=0**;产物 vndemodesktop.app 启动存活,Metro `BUNDLE ./index.js` 完成加载(5.2MB macos bundle,react-native-webview 编入),WebView 琥珀冒烟页窗口呈现(用户屏可见;沙箱无 screencapture 权限,以进程+Metro 侧证据闭环)
+- **环境三坑(复盘)**:① 本机 npm allow-scripts 策略拦 CLI 临时安装 → 手工组装模板;② react-native-macos@0.83.0 peer 钉 react-native@0.83.10(模板默认 0.83.0 必冲突);③ 后台命令 `run-macos | tail` 把真实退出码吃掉,首次"成功"实为失败——后续构建一律 `> log 2>&1; echo exit=$?` 模式;Xcode 27.1 需 xcode-select 切换 + license accept(用户操作),DEVELOPER_DIR 可免 sudo 临时切换
+- **screens 抽取偏离计划的改进**:pages.test.tsx 原样保留(穿透薄壳+屏幕的整链回归,零改动证明零行为回退),另加 screens.test.tsx 直渲三屏(证明无 expo-router 依赖 + 回调接线);比单纯迁移覆盖更强。教训:ResultScreen 的「返回」按钮只在失败态存在,成功态直渲断言写错了位置
+- 测试规模:130 → 135(+5:config 2/result 2/history 1);12 suites 全绿,tsc exit 0;三页薄壳化完成(app/index.tsx 15 行、result/[id].tsx 15 行、history.tsx 14 行)
