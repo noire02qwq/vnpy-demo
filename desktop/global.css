@@ -1,0 +1,17 @@
+/* 桌面壳 token:与 frontend/global.css 同一套琥珀终端体系(spec §4.1)。
+   单一事实源待后续抽取(跨包 css import 在两套 metro 下路径语义不同,先双份跑通)。 */
+@import "tailwindcss";
+@source "../frontend/src";
+
+@theme {
+  --color-base-950: #0B0A08;
+  --color-base-900: #14110D;
+  --color-base-800: #1E1913;
+  --color-line: #2C251B;
+  --color-ink: #EDE4D3;
+  --color-ink-dim: #9A8E78;
+  --color-accent: #F2A33C;
+  --color-accent-dim: #F2A33C22;
+  --color-up: #E5484D;
+  --color-down: #3DD68C;
+}
