@@ -21,6 +21,7 @@ export default function Index() {
   const [metas, setMetas] = useState<StrategyMeta[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [loadErrorText, setLoadErrorText] = useState("策略元数据加载失败");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -34,7 +35,13 @@ export default function Index() {
       })
       .catch((e: unknown) => {
         if (!cancelled) {
-          Alert.alert("错误", errorMessage(codeOf(e)));
+          const code = codeOf(e);
+          const reason =
+            code === "NETWORK_ERROR" && e instanceof Error
+              ? e.message
+              : errorMessage(code, e instanceof Error ? e.message : undefined);
+          Alert.alert("错误", reason);
+          setLoadErrorText(`策略元数据加载失败:${reason}`);
           setLoadFailed(true);
         }
       });
@@ -65,7 +72,7 @@ export default function Index() {
       </View>
 
       {loadFailed ? (
-        <Text style={styles.hint}>策略元数据加载失败</Text>
+        <Text style={styles.hint}>{loadErrorText}</Text>
       ) : loaded ? (
         <StrategyForm metas={metas} onSubmit={handleSubmit} submitting={submitting} />
       ) : (

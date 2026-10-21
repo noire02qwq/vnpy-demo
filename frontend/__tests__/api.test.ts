@@ -229,3 +229,18 @@ describe("getRun", () => {
     );
   });
 });
+
+
+describe("网络层失败 → NETWORK_ERROR", () => {
+  it("fetch reject(TypedError Failed to fetch)→ ApiError NETWORK_ERROR + 连接提示", async () => {
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    await expect(runBacktest(sampleRequest)).rejects.toMatchObject({
+      code: "NETWORK_ERROR",
+    });
+    await expect(runBacktest(sampleRequest)).rejects.toThrow(/无法连接后端/);
+  });
+
+  it("errorMessage(NETWORK_ERROR) 中文映射", () => {
+    expect(errorMessage("NETWORK_ERROR")).toBe("无法连接后端服务");
+  });
+});

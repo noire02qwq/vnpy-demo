@@ -262,7 +262,7 @@ describe("配置页(app/index)", () => {
   it("元数据加载失败:Alert 中文文案 + 失败提示", async () => {
     mockGetStrategies.mockRejectedValue(new ApiError("bad", "INVALID_SYMBOL"));
     const screen = await render(React.createElement(IndexPage));
-    expect(await screen.findByText("策略元数据加载失败")).toBeTruthy();
+    expect(await screen.findByText(/策略元数据加载失败:/)).toBeTruthy();
     expect(alertSpy).toHaveBeenCalledWith("错误", "无效标的代码");
   });
 

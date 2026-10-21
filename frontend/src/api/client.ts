@@ -34,6 +34,7 @@ const ERROR_TEXT: Record<string, string> = {
   BAD_PARAMS: "参数错误",
   RUN_NOT_FOUND: "回测记录不存在",
   INTERNAL: "服务器内部错误",
+  NETWORK_ERROR: "无法连接后端服务",
 };
 
 const FALLBACK_TEXT = "请求失败";
@@ -49,12 +50,21 @@ export function errorMessage(code: string | undefined, fallback?: string): strin
   return fallback ?? FALLBACK_TEXT;
 }
 
-/** 统一请求:默认 JSON 头(与调用方传入的 headers 合并,不被整体覆盖);非 2xx 解析 {code,message} 抛 ApiError;204 不解析 body */
+/** 统一请求:默认 JSON 头(与调用方传入的 headers 合并,不被整体覆盖);非 2xx 解析 {code,message} 抛 ApiError;204 不解析 body;网络层失败抛 NETWORK_ERROR */
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...init?.headers },
+    });
+  } catch {
+    // fetch 仅在网络层失败时 reject(后端未启动/代理劫持/跨源被拦)
+    throw new ApiError(
+      `无法连接后端(${API_BASE}),请确认后端已启动且未被代理拦截`,
+      "NETWORK_ERROR",
+    );
+  }
 
   if (!res.ok) {
     let body: { code?: string; message?: string } = {};

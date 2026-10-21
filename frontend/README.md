@@ -36,3 +36,12 @@ npm run desktop
 npx expo export -p web
 npm run desktop:dist
 ```
+
+## 排障:配置页「策略元数据加载失败」
+
+页面现在会显示真实原因。最常见的两种:
+
+1. **后端未启动** → 另开终端:`cd backend && uv run uvicorn app.main:app`(验证:`curl --noproxy '*' 127.0.0.1:8000/healthz` 返回 `{"status":"ok"}`)
+2. **系统代理劫持 localhost** → 本机已实锤代理会拦截 127.0.0.1:在代理软件中把 `localhost/127.0.0.1` 加入直连白名单,或临时关闭系统代理后刷新页面
+
+其他:EXPO_PUBLIC_API_BASE 指向错误(改 env 后需重启 dev server / 重建 Docker 镜像);端口被占用。
