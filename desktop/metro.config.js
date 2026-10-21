@@ -18,11 +18,15 @@ config.resolver.nodeModulesPaths = [
 // → Invalid hook call),必须用 resolveRequest 硬拦截;uniwind 的 resolver 会链到它。
 const fs = require("node:fs");
 const desktopReactDir = path.resolve(__dirname, "node_modules/react");
-const desktopRNDir = path.resolve(__dirname, "node_modules/react-native");
+// react-native JS 一律解析到 macos fork(主线 0.83.10 缺 macos 实现的 dev-support
+// 模块,如 ReactDevToolsSettingsManager;fork 才带 .macos.js)
+const desktopRNDir = path.resolve(__dirname, "node_modules/react-native-macos");
 // 包内子路径 → 真实文件(补扩展名/目录 index)
 function resolveLocalFile(dir, sub) {
   const candidates = [
     sub,
+    `${sub}.macos.js`,
+    `${sub}.native.js`,
     `${sub}.js`,
     `${sub}.json`,
     path.join(sub, "index.js"),

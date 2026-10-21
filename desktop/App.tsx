@@ -1,3 +1,4 @@
+import "./global.css";
 /**
  * 桌面壳:左侧栏(回测配置/历史记录)+ 主区共享 screens。
  * - 导航经 navReducer 纯状态机(TDD 于 frontend/__tests__/desktop-logic.test.ts);
