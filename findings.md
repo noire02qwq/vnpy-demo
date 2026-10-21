@@ -357,3 +357,10 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **jest 契约直接成立**:className 组件在 jest-expo(native preset)下渲染不崩、getByText 正常(className 对 RN View 是惰性 prop),无需任何 jest 侧 transform——现有测试体系零改动
 - 依赖:uniwind@1.13.0 + tailwindcss@4.3.3(npm 实装);web 导出产物含 `global-*.css` 且 token 色 `#0b0a08` 实证在包内
 - 全量回归:115 passed / 8 suites(114 基线 + 1 契约)、tsc exit 0、`CI=1 expo export -p web` 通过
+
+## S0b/S0c spike:RN-macOS init 与 rnr 路径(2026-10-21,进行中→关键结论)
+
+- **本机 npm 有 allow-scripts 安全策略**(~/.npmrc `allow-scripts=@alibaba-group/open-code-review`,EALLOWSCRIPTS):RN CLI 的 `--allow-scripts` 临时安装被拒 → init 改「手工组装模板」路径(拉 @react-native-community/template@0.83.0 tarball → _xxx 改名 .xxx → npm install)
+- **版本配对实锤**:react-native-macos@0.83.0 peer 要求 `react-native@0.83.10`(非 0.83.0!模板默认钉 0.83.0 必 eresolve)→ 升 0.83.10 后 macos-init 一次通过,生成 macos/ 工程(pod install + run-macos 指引)
+- **rnr CLI 1.0.0 定论**:交互式 TUI、无 add 子命令面,不适合脚本化落组件 → **采备路径:自研轻量组件**(计划 Task 5/6 已含完整实现,shadcn API 风格:cn 工具 + variants 映射 + uniwind className),不引 react-native-reusables 运行时依赖
+- Task 4(token 体系)TDD 完成:monoFontFor 纯函数(平台映射 android=monospace/ios+macos=Menlo/web=等宽栈)+ cn 工具;120 passed / 9 suites / tsc 0(教训:Platform.OS 是普通值属性,`spyOn(Platform,"OS","get")` 不可用 → 测纯函数优于 mock 平台)
