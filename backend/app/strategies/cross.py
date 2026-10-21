@@ -7,11 +7,11 @@ from vnpy.trader.utility import ArrayManager
 from vnpy_ctastrategy import CtaTemplate, TradeData
 
 from app.strategies.signals import signal_direction
-from app.strategies.sizing import plan_shares
+from app.strategies.sizing import plan_sell_shares, plan_shares
 
 
 class CrossTradeStrategy(CtaTemplate):
-    """金叉开多、死叉清仓;股数由 sizing 折算并以现金为硬约束。"""
+    """金叉按比例开多(仅空仓时)、死叉按 sell_pct% 比例卖出;现金/持仓硬约束。"""
 
     author = "noire02qwq"
     parameters: ClassVar[list[str]] = [
@@ -24,6 +24,7 @@ class CrossTradeStrategy(CtaTemplate):
         "kdj_m2",
         "entry_pct",
         "entry_basis",
+        "sell_pct",
         "am_size",
     ]
     variables: ClassVar[list[str]] = ["pos", "cash"]
@@ -37,6 +38,7 @@ class CrossTradeStrategy(CtaTemplate):
     kdj_m2 = 3
     entry_pct = 100.0
     entry_basis = "total"
+    sell_pct = 100.0
     am_size = 100
 
     cash = 0.0
@@ -79,7 +81,10 @@ class CrossTradeStrategy(CtaTemplate):
                 self.buy(round(bar.close_price * 1.05, 2), shares)
         elif direction < 0 and self.pos > 0:
             self.cancel_all()
-            self.sell(round(bar.close_price * 0.95, 2), abs(self.pos))
+            shares = plan_sell_shares(abs(self.pos), self.sell_pct)
+            if shares < 1:
+                return
+            self.sell(round(bar.close_price * 0.95, 2), shares)
 
     def on_trade(self, trade: TradeData) -> None:
         cost = trade.price * trade.volume

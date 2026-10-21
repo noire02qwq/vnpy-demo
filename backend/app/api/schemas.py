@@ -11,6 +11,8 @@ from app.strategies.registry import STRATEGY_REGISTRY
 STRATEGY_TYPES = tuple(STRATEGY_REGISTRY)
 # entry_pct 仅对 6 个信号形态有意义(turtle/dca 忽略该字段)
 SIGNAL_TYPES = {"macd_cross", "kdj_cross", "ema_cross", "macd_tpsl", "kdj_tpsl", "ema_tpsl"}
+# sell_pct 仅对 3 个金死叉形态有意义(死叉按比例卖出)
+CROSS_TYPES = {"macd_cross", "kdj_cross", "ema_cross"}
 
 
 class StrategySpec(BaseModel):
@@ -23,6 +25,10 @@ class StrategySpec(BaseModel):
     def check_entry(self) -> "StrategySpec":
         if self.type in SIGNAL_TYPES and not (0 < self.entry_pct <= 100):
             raise ValueError("entry_pct 必须在 (0,100]")
+        if self.type in CROSS_TYPES and "sell_pct" in self.params:
+            sell_pct = self.params["sell_pct"]
+            if not isinstance(sell_pct, (int, float)) or not (0 < sell_pct <= 100):
+                raise ValueError("sell_pct 必须在 (0,100]")
         return self
 
 

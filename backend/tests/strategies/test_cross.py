@@ -84,3 +84,37 @@ def test_no_trade_during_warmup() -> None:
     assert trades, "往返形态应有交易,零交易说明策略链路断裂"
     # brief 原文 t.time 不存在,同上改为 datetime
     assert all(t.datetime >= bars[PARAMS["am_size"]].datetime for t in trades)
+
+
+def test_death_cross_sells_configured_pct() -> None:
+    """死叉按 sell_pct 比例卖出,floor 不足 1 股跳过;剩余持仓保留。"""
+    bars = make_bars(round_trip_closes())
+    params = dict(PARAMS)
+    params["sell_pct"] = 50.0
+    run = run_backtest(bars, CrossTradeStrategy, params, CAPITAL, CostSettings(), symbol="TEST")
+    sells = [t for t in run.engine.get_all_trades() if t.direction == Direction.SHORT]
+    buys = [t for t in run.engine.get_all_trades() if t.direction == Direction.LONG]
+    assert buys and sells
+    assert sells[0].volume == buys[0].volume // 2  # 50% 比例
+    # 剩余持仓保留(全平断言不再成立)
+
+
+def test_death_cross_tiny_pct_skips() -> None:
+    """sell_pct 过小 floor→0 股:跳过卖出,持仓保留。"""
+    bars = make_bars(round_trip_closes())
+    params = dict(PARAMS)
+    params["sell_pct"] = 0.05  # ~千股持仓 × 0.05% = <1 股
+    run = run_backtest(bars, CrossTradeStrategy, params, CAPITAL, CostSettings(), symbol="TEST")
+    sells = [t for t in run.engine.get_all_trades() if t.direction == Direction.SHORT]
+    assert not sells, "floor→0 股应跳过卖出"
+    assert abs(run.engine.strategy.pos) > 0, "持仓应保留"
+
+
+def test_death_cross_default_full_exit() -> None:
+    """默认 sell_pct=100 行为回退兼容:全仓卖出。"""
+    bars = make_bars(round_trip_closes())
+    run = run_backtest(bars, CrossTradeStrategy, dict(PARAMS), CAPITAL, CostSettings(), symbol="TEST")
+    trades = run.engine.get_all_trades()
+    total_buy = sum(t.volume for t in trades if t.direction == Direction.LONG)
+    total_sell = sum(t.volume for t in trades if t.direction == Direction.SHORT)
+    assert total_buy == total_sell

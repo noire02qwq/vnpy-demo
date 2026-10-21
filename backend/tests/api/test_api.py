@@ -107,3 +107,10 @@ def test_data_fetch(client) -> None:
     r = client.post("/api/v1/data/fetch", json={"symbol": "TEST", "start": "2023-01-02", "end": "2023-12-31"})
     assert r.status_code == 200
     assert r.json()["rows"] == 120
+
+
+def test_cross_sell_pct_range_400(client) -> None:
+    bad = dict(BODY, strategy={"type": "ema_cross", "params": {"fast_period": 5, "slow_period": 20, "sell_pct": 150}, "entry_pct": 100.0, "entry_basis": "total"})
+    r = client.post("/api/v1/backtests", json=bad)
+    assert r.status_code == 400
+    assert r.json()["code"] == "BAD_PARAMS"

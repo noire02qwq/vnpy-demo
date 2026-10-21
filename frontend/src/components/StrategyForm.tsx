@@ -138,6 +138,16 @@ export function validateForm(
       return "止损比例需大于 0";
     }
   }
+  // 金死叉形态:卖出比例 sell_pct ∈ (0,100](镜像后端 CROSS_TYPES 校验)
+  if (meta !== undefined && meta.mode === "cross") {
+    const rawSell = state.params.sell_pct;
+    if (rawSell !== undefined && String(rawSell).trim() !== "") {
+      const sellPct = toNumber(String(rawSell), NaN);
+      if (!(sellPct > 0 && sellPct <= 100)) {
+        return "卖出比例需在 (0,100] 区间";
+      }
+    }
+  }
   // 数字防线:schema 数字参数(Number("") === 0,须先排除空串)与暖机/成本项须为有限数字
   if (meta) {
     for (const key of Object.keys(meta.schema)) {

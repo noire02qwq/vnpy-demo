@@ -12,3 +12,10 @@ def plan_shares(base: float, entry_pct: float, price: float, cash: float, entry_
         return 0
     budget = budget_amount(base, entry_pct)
     return min(math.floor(budget / price), math.floor(cash / price))
+
+
+def plan_sell_shares(pos: float, sell_pct: float) -> int:
+    """卖出股数 = floor(持仓 × sell_pct/100);不足 1 股或无持仓返回 0(不卖)。"""
+    if pos <= 0 or sell_pct <= 0:
+        return 0
+    return min(math.floor(pos * sell_pct / 100.0), int(pos))

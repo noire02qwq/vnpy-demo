@@ -113,3 +113,30 @@ def test_2n_stop_pierced_by_huge_down_bar() -> None:
     assert sell.price == pytest.approx(min(stop_price, bars[61].open_price))
     assert sell.price == pytest.approx(stop_price)  # stop < open → 成交价即 stop 本身
     assert run.engine.strategy.pos == 0
+
+
+def test_entry_unit_capped_by_cash() -> None:
+    """现金不足时买入股数受现金硬约束(floor(cash/price)),不足 1 股不买。"""
+    from datetime import datetime, timedelta
+
+    from tests.fixtures.synth import make_bar
+
+    # 小波动率(高=101.0/低=99.0 窄幅)使 ATR 单元需求远超现金
+    closes = [100.0] * 60 + [100 + i for i in range(1, 21)]
+    bars = []
+    day = datetime(2023, 1, 2)
+    prev = closes[0]
+    for i, c in enumerate(closes):
+        o = prev
+        h = round(max(o, c) * 1.001, 2)
+        l = round(min(o, c) * 0.999, 2)
+        bars.append(make_bar(day, o, h, l, c))
+        prev = c
+        day += timedelta(days=1)
+
+    capital = 20_000.0
+    run = run_backtest(bars, TurtleStrategy, {"entry_days": 20, "exit_days": 10, "atr_days": 14, "am_size": 60}, capital, CostSettings())
+    buys = [t for t in run.engine.get_all_trades() if t.direction == Direction.LONG]
+    assert buys, "突破后应有买入"
+    first_open = bars[61].open_price  # 突破 bar 的下一根开盘价(实际成交价)
+    assert buys[0].volume == int(capital // first_open), "买入股数应受现金硬约束"

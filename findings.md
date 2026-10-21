@@ -313,3 +313,12 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **SPA fallback**:非存在文件路径(含目录、防穿越拦截)一律回 `index.html`,对齐 `docker/nginx.conf` 的 `try_files $uri $uri.html $uri/ /index.html`;MIME 表覆盖 html/js/css/json/svg/png/ico/woff/woff2。为什么不能 loadFile:file:// opaque origin 下 expo-router 把站内 `<Link>` 判为外部链接走 `window.location` 整页硬导航 → `file:///history` ERR_FILE_NOT_FOUND(D3 已实测),http 源下走正常 SPA 导航。
 - **冒烟证据**:`--remote-debugging-port=9222` 后台起 dist 模式 → `/json/list` 页面 URL 为 `http://127.0.0.1:51723/`(http 而非 file://);`curl /history` → **200** 且返回 index.html 内容(硬导航目标不再 404),`/result/42`、`/` 同 200;真实 JS 资产 `_expo/static/js/web/history-*.js` → 200 `text/javascript`;`--path-as-is /../../etc/passwd` 穿越 → 返回 index.html(无泄漏);杀 electron 后内嵌端口关闭;`node --check` 通过;`npm test` 109 全绿(无前端代码改动)。
 - **兼容性**:dev 分支(http URL)逻辑不变;`package.json` 的 `desktop:dist` script(`DESKTOP_URL=../frontend/dist/index.html`)不改,指向文件的路径自动走新静态服务分支(文件→取其所在目录为静态根,目录→直接作根)。
+
+## 迭代:死叉卖出比例与全策略兜底(2026-10-21)
+
+- 需求:金死叉策略卖出改为指定比例;全策略加「现金不够不买、持仓不够不卖」兜底
+- 实现:sizing.plan_sell_shares(floor(pos×pct/100),受持仓上界,不足 1 股返回 0);CrossTradeStrategy 增 sell_pct 参数(默认 100 向后兼容,registry defaults 同步→meta schema 自动暴露);死叉卖出不足 1 股跳过、持仓保留
+- 海龟:入场/加仓 unit 增加 min(unit, floor(cash/price)) 现金硬约束(dca 原有守卫、cross/tpsl 经 plan_shares 现金约束本已覆盖)
+- API:schemas.py CROSS_TYPES 校验 sell_pct ∈ (0,100](params 内);前端 StrategyForm validateForm 镜像(mode==="cross")
+- 范围决策:TP/SL 与海龟的止损/通道离场为保护性出场保持全仓不变(spec §5.3 已注明)
+- 测试:后端 111(+6)/ 前端 112(+3),全绿

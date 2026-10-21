@@ -68,6 +68,8 @@ class TurtleStrategy(CtaTemplate):
 
         if self.pos == 0 and bar.close_price > entry_up_prev:
             unit = int(equity * (self.risk_pct / 100.0) / max(atr, 1e-9))
+            # 兜底:现金不足 1 股价(或 ATR 单元需求超出现金)按现金硬约束缩量
+            unit = min(unit, int(self.cash // bar.close_price))
             if unit > 0:
                 self.units = 1
                 self.last_entry_price = bar.close_price
@@ -79,6 +81,7 @@ class TurtleStrategy(CtaTemplate):
             and bar.close_price >= self.last_entry_price + self.add_on_n * self.entry_atr
         ):
             unit = int(equity * (self.risk_pct / 100.0) / max(atr, 1e-9))
+            unit = min(unit, int(self.cash // bar.close_price))
             if unit > 0:
                 self.units += 1
                 self.last_entry_price = bar.close_price

@@ -19,7 +19,7 @@ _TPSL_DEFAULTS = {
     "am_size": 30,
 }
 
-_CROSS_DEFAULTS = {"entry_pct": 100.0, "entry_basis": "total", "am_size": 100}
+_CROSS_DEFAULTS = {"entry_pct": 100.0, "entry_basis": "total", "sell_pct": 100.0, "am_size": 100}
 
 _MODE_CLS = {CrossTradeStrategy: "cross", CrossTpslStrategy: "tpsl"}
 

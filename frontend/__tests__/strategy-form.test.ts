@@ -446,3 +446,26 @@ describe("StrategySpec 类型契约(类型诚实化)", () => {
     expect(spec.type).toBe("turtle");
   });
 });
+
+
+describe("金死叉 sell_pct 校验(镜像后端)", () => {
+  const withSell = (v: string) =>
+    validState({
+      strategyType: "ema_cross",
+      params: { ...emaCrossMeta.defaults, sell_pct: v },
+    });
+
+  it("sell_pct 150 → 报错", () => {
+    expect(validateForm(withSell("150"), emaCrossMeta)).toBe(
+      "卖出比例需在 (0,100] 区间",
+    );
+  });
+
+  it("sell_pct 合法(50)→ 通过", () => {
+    expect(validateForm(withSell("50"), emaCrossMeta)).toBeNull();
+  });
+
+  it("sell_pct 缺省(空)→ 通过(走后端默认 100)", () => {
+    expect(validateForm(withSell(""), emaCrossMeta)).toBeNull();
+  });
+});

@@ -20,3 +20,14 @@ def test_basis_cash_capped() -> None:
 
 def test_zero_when_cannot_afford() -> None:
     assert plan_shares(1_000.0, 100.0, 500.0, 100.0, "cash") == 0
+
+
+def test_plan_sell_shares_partial_and_floor() -> None:
+    from app.strategies.sizing import plan_sell_shares
+
+    assert plan_sell_shares(10, 50.0) == 5
+    assert plan_sell_shares(3, 50.0) == 1
+    assert plan_sell_shares(3, 20.0) == 0   # floor→0 股,不卖
+    assert plan_sell_shares(0, 100.0) == 0  # 无持仓
+    assert plan_sell_shares(10, 100.0) == 10
+    assert plan_sell_shares(10, 150.0) == 10  # 超 100 按 floor(pos×1.5) 仍受持仓上界

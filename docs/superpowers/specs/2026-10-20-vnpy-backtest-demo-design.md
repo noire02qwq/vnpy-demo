@@ -100,7 +100,7 @@ flowchart LR
 - 仅信号形态适用 entry_pct/entry_basis;海龟/定投按各自规则
 
 ### 5.3 策略模板
-1. **CrossTradeStrategy**(×3 信号源 = 3 形态):on_bar 收到金叉 → 按 sizing 买入;死叉 → 清仓卖出。无持仓时忽略死叉。
+1. **CrossTradeStrategy**(×3 信号源 = 3 形态):on_bar 收到金叉 → 按 sizing 买入(仅空仓时);死叉 → **卖出 `sell_pct`%(默认 100,可配)`floor(pos×sell_pct/100)` 股,不足 1 股跳过**。通用兜底(全部策略):买入前现金不足 1 股价不下单;卖出股数以实际持仓为上界,不足 1 股不卖。TP/SL 与海龟的止损/通道离场为保护性出场,保持全仓不变。
 2. **CrossTpslStrategy**(×3 信号源 = 3 形态):金叉 → 按 sizing 发限价买单;on_trade 得到实际成交价后挂**止盈限价卖单**(成交价×(1+take_profit_pct))与**止损 vnpy stop 卖单**(成交价×(1−stop_loss_pct))。全部出场经引擎撮合(禁止策略内自判成交绕过引擎,否则 §6.2 net_pnl 曲线失真);vnpy 日频撮合下:止损单在 bar 触发价内触发,止盈限价单依赖开盘跳空触及,**死叉清仓作为兜底出场**;空仓后金叉可再入场。
 3. **TurtleStrategy**:唐奇安 entry/exit 通道(默认 20/10,可配)+ ATR(20);`unit_shares = floor((equity × 1%) / ATR)`(经典 1N 风险),最多 4 单元(突破加仓间隔 0.5N);总止损 = 最近入场价 − 2N,挂 vnpy stop 单全平;通道反向跌破 → 限价清仓并撤销止损单;做多 only(美股无融券,不做空)。
 4. **DcaStrategy**:间隔 `weekly|biweekly|monthly`,锚定区间首个交易日所在周/月,每间隔首个交易日按固定 `amount` 买入 `floor(amount/price)` 股;现金不足一股则跳过;持有到期不清仓。
