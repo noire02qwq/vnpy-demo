@@ -335,3 +335,55 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - 修正:chart-data.ts 新增 toPctOfCapital(占初始资金 %,不减现金,起点 0),position 线改用;equity/benchmark 仍为累计收益率 %
 - 图例更新:「持仓资金(占初始资金%)」+ 说明文字区分两种口径
 - 纯前端展示层修正,后端 curves.position_value 契约不变;前端 114 tests 全绿
+
+## 桌面 RN-macOS + shadcn/tailwind 调研(2026-10-21,第一轮)
+
+- **react-native-macos 版本断层(核心约束)**:微软仓库最新 release 0.77.4 / 0.78.x(2025-07),本项目 frontend 为 Expo SDK 58 / **RN 0.88**;react-native-macos 是 RN 的 fork,**版本必须与 react-native 严格对齐**,塞不进现有 Expo 58 工程;Expo 官方无 `prebuild -p macos`("additional platform support" 文档仅面向自定义 native module,非 app 目标;expo/expo#22273 讨论仍 open)
+- **react-native-webview**:官方兼容 iOS/Android/**macOS**/Windows,要求 New Architecture(Fabric)+ react-native-macos ≥ 0.76 → 0.78 可用,**WebView 承载 LightweightCharts 的图表方案可平移到 macOS 壳**
+- **NativeWind**:v4.2.7(Tailwind 3)官宣支持到 Expo SDK 57(RN 0.81);v5.0.0-rc.0(配 css-interop 3.1.0-rc.0,须成对精确安装)目标也是 SDK 57;**SDK 58 / RN 0.88 支持未官宣,存在风险**
+- **react-native-reusables(rnr,shadcn/ui for RN)**:活跃,组件复制进项目(own the code),支持 NativeWind 或 **Uniwind**(新引擎),Expo 通用模板起步;同款组件名与 shadcn/ui 对齐
+
+## 桌面 RN-macOS + shadcn/tailwind 调研(2026-10-21,第二轮定论)
+
+- **react-native-macos 版本线修正(npm 为事实源)**:dist-tags `latest=0.83.0`、`0.81-stable=0.81.9`、`0.79-stable=0.79.4`、`0.78-stable=0.78.6`;GitHub releases 页信息滞后(只显示到 0.77/0.78)。`react-native-macos-init@2.1.3`;官方流程 = `@react-native-community/cli init <name> --version <RN版本>` → `npx react-native-macos-init` 补 macOS target
+- **uniwind@1.13.0(定论:双端统一 tailwind 引擎)**:peer `react>=19 / react-native>=0.81 / tailwindcss>=4 / metro|@expo/metro-config=*` → Expo 58(RN 0.88)满足;Tailwind v4 only;无 babel preset;Metro 插件 `withUniwindConfig({cssEntryFile, dtsFile})`;`@source` 支持跨目录扫描(monorepo 共享组件的关键);支持 iOS/Android/tvOS/**Web**/**Desktop(macOS/Windows)**、Expo(含 Expo Go)/裸 RN/monorepo;有平台选择器;社区已有 rn-macos+uniwind 模板实证;NativeWind(无 macOS 支持,官宣止步 SDK 57)被否
+- **rnr(react-native-reusables)接入面**:支持 NativeWind **或 Uniwind**;组件复制进项目(own the code,shadcn 同款体验);基于 RN Primitives(Radix 移植);部分重组件依赖 reanimated → 选轻量组件集(button/card/input/label/tabs/switch/separator),select 类重组件用简单实现替代
+- **现有前端依赖面盘点(共享可行性核心证据,grep 实测)**:三个路由页只依赖 react/react-native/expo-router;src/components(StrategyForm/MetricCards/TradeList)只依赖 react/react-native + api 类型;src/charts 依赖 lightweight-charts(纯 TS) + react-native-webview(**官方支持 macOS ≥0.76 + 新架构**)→ **双壳共源零阻力**:src/api、src/charts、src/components 原样共享,仅需把 expo-router 页面胶水(useState/useEffect 数据流)抽为无路由依赖的共享层
+- **架构结论(候选方案 A)**:frontend/(Expo 58,iOS/Android/Web 不动)+ desktop/ 重建为 react-native-macos 0.83 独立 app(自带 package.json,版本自洽),Metro watchFolders/@source 共享 frontend/src;桌面壳不用 expo-router(裸 RN 无 Expo 模块),自建侧栏导航;Electron 在 macOS 壳功能对齐后删除
+
+## S0a spike:uniwind×Expo58 实测(2026-10-21,全通过)
+
+- `withUniwindConfig(config, { cssEntryFile: "./global.css", dtsFile?: ... })` 选项面自 `uniwind/dist/metro/index.d.ts` 实证(另有 extraThemes/polyfills/debug/isTV);`uniwind/metro` 导出存在
+- **jest 契约直接成立**:className 组件在 jest-expo(native preset)下渲染不崩、getByText 正常(className 对 RN View 是惰性 prop),无需任何 jest 侧 transform——现有测试体系零改动
+- 依赖:uniwind@1.13.0 + tailwindcss@4.3.3(npm 实装);web 导出产物含 `global-*.css` 且 token 色 `#0b0a08` 实证在包内
+- 全量回归:115 passed / 8 suites(114 基线 + 1 契约)、tsc exit 0、`CI=1 expo export -p web` 通过
+
+## S0b/S0c spike:RN-macOS init 与 rnr 路径(2026-10-21,进行中→关键结论)
+
+- **本机 npm 有 allow-scripts 安全策略**(~/.npmrc `allow-scripts=@alibaba-group/open-code-review`,EALLOWSCRIPTS):RN CLI 的 `--allow-scripts` 临时安装被拒 → init 改「手工组装模板」路径(拉 @react-native-community/template@0.83.0 tarball → _xxx 改名 .xxx → npm install)
+- **版本配对实锤**:react-native-macos@0.83.0 peer 要求 `react-native@0.83.10`(非 0.83.0!模板默认钉 0.83.0 必 eresolve)→ 升 0.83.10 后 macos-init 一次通过,生成 macos/ 工程(pod install + run-macos 指引)
+- **rnr CLI 1.0.0 定论**:交互式 TUI、无 add 子命令面,不适合脚本化落组件 → **采备路径:自研轻量组件**(计划 Task 5/6 已含完整实现,shadcn API 风格:cn 工具 + variants 映射 + uniwind className),不引 react-native-reusables 运行时依赖
+- Task 4(token 体系)TDD 完成:monoFontFor 纯函数(平台映射 android=monospace/ios+macos=Menlo/web=等宽栈)+ cn 工具;120 passed / 9 suites / tsc 0(教训:Platform.OS 是普通值属性,`spyOn(Platform,"OS","get")` 不可用 → 测纯函数优于 mock 平台)
+
+## S0b spike 终局 + screens 抽取(2026-10-21)
+
+- **RN-macOS 0.83 构建全链路打通**:AppDelegate.swift 模板坑(let 属性在 super.init() 后赋值 → "may only be initialized once",挪到 super.init() 前修复)后 `xcodebuild -scheme vndemodesktop-macOS build` **exit=0**;产物 vndemodesktop.app 启动存活,Metro `BUNDLE ./index.js` 完成加载(5.2MB macos bundle,react-native-webview 编入),WebView 琥珀冒烟页窗口呈现(用户屏可见;沙箱无 screencapture 权限,以进程+Metro 侧证据闭环)
+- **环境三坑(复盘)**:① 本机 npm allow-scripts 策略拦 CLI 临时安装 → 手工组装模板;② react-native-macos@0.83.0 peer 钉 react-native@0.83.10(模板默认 0.83.0 必冲突);③ 后台命令 `run-macos | tail` 把真实退出码吃掉,首次"成功"实为失败——后续构建一律 `> log 2>&1; echo exit=$?` 模式;Xcode 27.1 需 xcode-select 切换 + license accept(用户操作),DEVELOPER_DIR 可免 sudo 临时切换
+- **screens 抽取偏离计划的改进**:pages.test.tsx 原样保留(穿透薄壳+屏幕的整链回归,零改动证明零行为回退),另加 screens.test.tsx 直渲三屏(证明无 expo-router 依赖 + 回调接线);比单纯迁移覆盖更强。教训:ResultScreen 的「返回」按钮只在失败态存在,成功态直渲断言写错了位置
+- 测试规模:130 → 135(+5:config 2/result 2/history 1);12 suites 全绿,tsc exit 0;三页薄壳化完成(app/index.tsx 15 行、result/[id].tsx 15 行、history.tsx 14 行)
+
+## S3 三页重设计(2026-10-21)
+
+- StrategyForm 逻辑函数(validateForm/buildRequest/createInitialState)逐字保留,渲染层换 ui 件;EnumSelect native 分支 chips→Segmented,web 分支保留原生 <select>(琥珀配色走 DOM style,fontSize/fontFamily 直设)
+- 坑两枚:① UIText 内嵌 View 非法(Text 只能有 Text 子),错误文案直接用 Text+className;② 给「历史记录」加「→」装饰破坏 getByText 文本断言——文本契约从简,装饰让位测试稳定性(零回退原则)
+- StatusLine 语义收敛:null=仅品牌不显后端态(Expo 页不做探测),desktop 传真值;三屏 StatusLine per-screen 渲染(right 上下文:配置 n FORMS / 结果 RUN <id> · <n> TRADES / 历史 <n> RUNS),desktop 无需全局行,省 renderStatusLine 旗标
+- 收益率行正负着色:解析 formatMetric 结果首字符 "-" 判负(纯展示层,不动 formatMetric 契约);图表主题仅 4 色值替换(背景/文字/网格/轴),CHART_COLORS 系列色零改动;单参 buildChartHtml 不含 init 脚本,主题断言须显式传 chartInitScript(kind)
+
+## 终验(2026-10-21,Phase 6/7 收口)
+
+- **桌面构建终验**:codesign「resource fork/FinderInfo detritus」三连修后(仓库处于 FileProvider 同步盘,xattr 清一次会被回填;正解 = `xattr -cr desktop/macos/Pods` + `-derivedDataPath /tmp/vndemo-dd` 产物放盘外)`xcodebuild … build` **exit=0 + BUILD SUCCEEDED**;产物启动(PID 存活)、主动拉取 Metro macos bundle、`ReactInstance: evaluateJavaScript()` 执行(React 运行时起来)
+- **误判教训(zsh)**:`cmd | tail -n` 后 `${PIPESTATUS[0]}` 是 bash 语法,zsh 取不到 → exit 恒 0,两次把失败读成成功。纪律:后台构建一律 `> log 2>&1; echo exit=$? | tee status`
+- **codegen 生成物**:desktop/macos/build/generated 由 pod install 产出,`rm -rf build` 后必须重跑 pod install(ReactCodegen 编译依赖它);macos/.gitignore 补 `build/`
+- **终检(全绿)**:backend `111 passed, 1 warning` + ruff `All checks passed!`(零改动);frontend `146 passed/13 suites` + `tsc --noEmit` exit 0 + `CI=1 expo export -p web` 通过;桌面 `BUILD SUCCEEDED`
+- **Electron 痕迹清除**:frontend package.json(scripts 仅剩 start/test/android/ios/web/lint,devDep electron 移除);docker/ 两文件 grep 无残留;desktop/ 旧 main.js/quick-start.js 随迁移删除
+- 人工项挂账:桌面窗口 UI 视觉验收与真实回测操作(应用此刻在用户屏幕运行,后端已起)待用户确认;Debug 构建需 Metro 供包,Release 静态 bundle 列后续

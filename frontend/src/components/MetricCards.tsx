@@ -3,10 +3,12 @@
  * METRIC_LABELS(中文标签映射)与 formatMetric(格式化纯函数)导出供复用与测试;
  * 契约:null/缺省 → "—",字符串(日期)原样,百分率键 ×100 两位 + "%",
  * 其余数值保留 3 位,负数自然带符号;未入标签表的键(如 start_date)以键名兜底。
+ * 视觉:琥珀终端(base-800 卡片、mono 数值)。
  */
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import type { FC } from "react";
 import type { MetricsMap } from "../api/types";
+import { FONT_MONO } from "../ui/theme";
 
 /** 指标键 → 中文标签(键序即卡片展示顺序) */
 export const METRIC_LABELS: Record<string, string> = {
@@ -82,11 +84,12 @@ const styles = StyleSheet.create({
   card: {
     minWidth: 96,
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "#2C251B",
     borderRadius: 8,
+    backgroundColor: "#1E1913",
     paddingVertical: 8,
     paddingHorizontal: 10,
   },
-  label: { fontSize: 11, color: "#666666", marginBottom: 2 },
-  value: { fontSize: 14, fontWeight: "600" },
+  label: { fontSize: 11, color: "#9A8E78", marginBottom: 2 },
+  value: { fontSize: 14, fontWeight: "600", color: "#EDE4D3", fontFamily: FONT_MONO },
 });

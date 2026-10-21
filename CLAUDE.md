@@ -1,6 +1,6 @@
 # vn-demo 项目规范
 
-个人研究项目:vnpy 量化交易策略与回测 demo。后端 FastAPI + vnpy 4.5.0(无 GUI 程序化回测),前端 Expo React Native(iOS/Android/Web)+ Electron 桌面壳。作者 noire02qwq。
+个人研究项目:vnpy 量化交易策略与回测 demo。后端 FastAPI + vnpy 4.5.0(无 GUI 程序化回测),前端 Expo React Native(iOS/Android/Web)+ react-native-macos 原生桌面壳(双壳共享 frontend/src,uniwind/Tailwind v4 琥珀终端 UI)。作者 noire02qwq。
 
 ## 硬性约定
 
@@ -39,14 +39,17 @@ vn-demo/
 │   │   ├── db/          # models.py session.py
 │   │   └── main.py
 │   └── tests/           # 与 app/ 镜像 + fixtures/(合成K线生成器)
-├── frontend/            # Expo RN(启用 web)
-│   ├── app/             # expo-router 页面:index(配置) result/[id] history
+├── frontend/            # Expo RN(启用 web)+ 共享层(双壳共源)
+│   ├── app/             # expo-router 薄壳:index(配置) result/[id] history(页面体在 src/screens)
+│   ├── global.css       # 琥珀终端 token(Tailwind v4 @theme,uniwind 入口)
 │   ├── src/
-│   │   ├── api/         # 类型化客户端(openapi-typescript 生成 schema.ts)
-│   │   ├── components/  # 通用 UI
-│   │   └── charts/      # LightweightCharts 封装(web 直用,native 走 WebView)
-│   └── __tests__/       # jest + @testing-library/react-native
-├── desktop/             # Electron 壳(加载 web build 或 dev server)
+│   │   ├── api/         # 类型化客户端(schema.json 手工镜像)
+│   │   ├── components/  # 通用 UI(className + ui 件)
+│   │   ├── charts/      # LightweightCharts 封装(web 直用,native/macos 走 WebView)
+│   │   ├── screens/     # 三页页面体(无路由依赖,导航 props 注入,双壳共享)
+│   │   └── ui/          # shadcn 风格组件(Text/Button/Card/Input/Segmented/StatusLine…)
+│   └── __tests__/       # jest + RNTL(含 desktop 壳纯逻辑)
+├── desktop/             # react-native-macos 0.83 桌面壳(侧栏导航,watchFolders 共享 frontend/src)
 └── docker/
     ├── backend.Dockerfile
     ├── frontend.Dockerfile
@@ -67,9 +70,12 @@ uv run uvicorn app.main:app --reload       # 本地起服务 :8000
 # 前端(在 frontend/)
 npx expo start                   # 开发(iOS/Android/Web)
 npx expo export -p web           # web 构建产物 dist/
-npm test                         # jest
-npm run desktop:full             # 一键:起后端 + 桌面端(推荐)
-npm run desktop                  # Electron 壳加载 dist/(需先 export)
+npm test                         # jest(含 desktop 壳纯逻辑)
+
+# 桌面端(在 desktop/;前置 Xcode + brew install cocoapods)
+npm install                      # 依赖(react-native-macos 0.83 + uniwind)
+npm run macos                    # 构建 + 启动(Debug 需另开 npm start 供包)
+npm start                        # Metro(:8081)
 
 # Docker(在 docker/)
 docker compose build backend / frontend

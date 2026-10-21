@@ -1,48 +1,37 @@
-# desktop — Electron 桌面壳
+# desktop — react-native-macos 桌面壳
 
-加载前端 web 版的最小 Electron 壳(主进程仅 `main.js`,无预加载/IPC)。
-
-两种目标,由 `DESKTOP_URL` 环境变量区分:
-
-- 以 `http(s)://` 开头 → `win.loadURL(...)`(**dev 模式**,连 Metro dev server)
-- 其余按路径处理 → **dist 模式**,主进程起一个 `127.0.0.1` 随机端口的内嵌静态服务托管 `dist/`,窗口加载 `http://127.0.0.1:<port>/`
-
-未设置 `DESKTOP_URL` 时默认 `http://localhost:8081`(expo web dev server)。
+vn-demo 的原生 macOS 客户端(替代早期 Electron 壳):**react-native-macos 0.83**(Fabric 新架构)+ uniwind(Tailwind v4)琥珀终端 UI。与 `../frontend/` 双壳共享源码——本目录只保留壳(侧栏导航状态机 + 健康探测 + Metro 配置),页面体/组件/图表全部来自 `../frontend/src/`(经 Metro `watchFolders` + uniwind `@source` 引入)。
 
 ## 前置
 
-```bash
-cd frontend
-npm install              # 安装依赖(含 devDependency electron)
-```
+- Xcode(完整版,`xcode-select -s` 指向它)
+- CocoaPods:`brew install cocoapods`
+- 后端已在 `:8000` 运行(API 地址缺省 `http://localhost:8000`,状态行显示连通状态、可点重试)
 
-## dev 模式(热更新,日常开发)
-
-```bash
-# 终端 1:起 expo web dev server
-cd frontend && npm run web
-
-# 终端 2:开 Electron 窗口(默认即连 http://localhost:8081)
-cd frontend && npm run desktop
-# 端口不同时显式指定:DESKTOP_URL=http://localhost:8081 npm run desktop
-```
-
-## dist 模式(静态导出,接近产物形态)
+## 运行
 
 ```bash
-# 先导出静态 web 产物(frontend/dist/)
-cd frontend && npx expo export -p web
-
-# 开 Electron 窗口(内嵌静态服务加载 dist/,站内导航正常)
-cd frontend && npm run desktop:dist
+cd desktop
+npm install          # 依赖(react-native-macos 0.83 / uniwind / react-native-webview)
+npm run macos        # 构建 + 启动(首次 pod install 较久)
+npm start            # Metro :8081(Debug 构建需它供 JS 包;Release 打静态 bundle 属后续项)
 ```
 
-`desktop:dist` 即 `DESKTOP_URL=../frontend/dist/index.html electron ../desktop/main.js`。路径以 `desktop/main.js` 所在目录为基准解析(main.js 内部显式 `path.resolve(__dirname, target)` 锚定,指向文件则取其所在目录为静态根),与 shell 的 cwd 无关。
+## 结构
 
-原理:dist 模式**不再用 `loadFile`**——file:// 页面是 opaque origin,expo-router 会把站内 `<Link>` 判为外部链接走 `window.location` 整页硬导航,`file:///history` 在磁盘上不存在 → ERR_FILE_NOT_FOUND 白屏。改为 node 内置 `http` 起极简静态服务(SPA fallback:非存在文件一律回 index.html,与 docker/nginx.conf 的 `try_files ... /index.html` 行为一致),硬导航目标不再 404,站内导航正常;服务随窗口关闭而关闭,应用代码零改动。
+```
+desktop/
+├── App.tsx            # 侧栏(回测配置/历史记录)+ 主区共享 screens + 探测注入
+├── src/navigation.ts  # 导航状态机(纯逻辑,TDD 于 frontend/__tests__/desktop-logic.test.ts)
+├── src/health.ts      # healthz 探测(一次,不轮询)
+├── global.css         # 琥珀 token(与 frontend/global.css 同套,@source 扫描 frontend/src)
+├── metro.config.js    # watchFolders + nodeModulesPaths + withUniwindConfig
+└── macos/             # Xcode 工程(macos-init 生成;Pods/build 已 gitignore)
+```
 
-## 说明
+## 已知坑(实测复盘,详见根 findings.md)
 
-- 窗口 1280x800,标题「vn-demo 回测」。
-- 所有窗口关闭即退出应用(全平台一致,darwin 不保留 dock 常驻的简化处理)。
-- 环境约定 macOS 优先;`desktop:dist` 的内联 `VAR=x cmd` 写法依赖 POSIX sh,Windows 需 cross-env(暂未引入)。
+- `react-native-macos@0.83.0` peer 钉 `react-native@0.83.10`(模板默认 0.83.0 会 eresolve)
+- 模板 `AppDelegate.swift` 的 `let` 属性在 `super.init()` 后赋值会编译失败(本仓库已修)
+- 本仓库目录在 FileProvider 同步盘下时,codesign 报「resource fork, Finder information …」:`xattr -cr desktop/macos/Pods` 后将产物放同步盘外(`-derivedDataPath /tmp/vndemo-dd`)即可
+- 本机 npm 有 allow-scripts 安全策略,RN CLI 的 `--allow-scripts` 会被拒 → 用模板 tarball 手工组装工程(本仓库工程已是成品,重装时直接 `npm install` 即可)

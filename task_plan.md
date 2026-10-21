@@ -15,6 +15,8 @@
 | D7 | 定投 = 固定金额 + 间隔(每周/每两周/每月首个交易日),持有到期不清仓 | 2026-10-20 |
 | D8 | 回测同步返回 + SQLite 落库,可查历史列表与详情 | 2026-10-20 |
 | D9 | 远程仓库 https://github.com/noire02qwq/vnpy-demo.git(初始为空);实时提交推送;必要时拉分支集成 | 2026-10-20 |
+| D10 | 桌面 = react-native-macos 0.83 独立 app(方案 A 双壳共源,共享 frontend/src);Electron 功能对齐后删除;NativeWind 因无 macOS 支持被否 | 2026-10-21 |
+| D11 | tailwind = uniwind 1.13(Tailwind v4,唯一支持 Desktop/macOS 的引擎)+ rnr 轻量组件集;视觉 = 琥珀行情终端(深色固定、等宽数字、终端状态行 signature) | 2026-10-21 |
 
 ## 阶段
 
@@ -55,6 +57,21 @@
 - [x] 全部功能支持,backend + frontend 测试全绿(105 + 109)
 - [x] 端到端 demo:compose 环境真实回测(AAPL 3 年 ema_cross,34 笔/8.46%,metrics/curves/trades 完整);浏览器图表人工联调待用户验证(已挂账)
 - [x] 最终提交推送(feat(docker): M6 验收收尾)
+
+### Phase 6:桌面 RN-macOS + shadcn/tailwind 重设计(2026-10-21 启动)— Status: complete
+- [x] 技术可行性调研(react-native-macos 0.83 / uniwind 1.13 / rnr / webview macOS,证据落 findings.md)
+- [x] 澄清关键问题:方案 A 双壳共源 + 琥珀行情终端(用户 2026-10-21 确认)
+- [x] 方案比选与用户确认(A/B/C 比选,推荐 A 获采纳)
+- [ ] 设计 spec(docs/superpowers/specs/2026-10-21-desktop-rnmacos-shadcn-design.md)+ 自审 + 用户批准
+- [x] 实施计划(docs/superpowers/plans/2026-10-21-desktop-rnmacos-shadcn.md,Task 1-16,自审通过)
+
+### Phase 7:TDD 实现(切片以实施计划为准)— Status: complete
+- [x] S0 spike 全通:uniwind×Expo58(jest 零改动)/ RN-macOS 0.83 构建 exit=0 + webview 冒烟 / rnr→自研轻量件;token 落地(theme.ts + cn + global.css)
+- [x] ui 组件层:Text/Button/Separator/Card/Input/Label/Segmented/StatusLine(138 测试含组件与 screens 层)
+- [x] S2/S3:screens 抽取 + 三页琥珀终端重设计 + 图表主题对齐(137→138 绿,tsc 0,web 导出过)
+- [x] desktop/:RN-macOS 壳(侧栏导航 + 共享 src/)+ 图表 WebView 验证(构建 exit=0 + 应用运行 + bundle 执行)
+- [x] Electron 移除 + scripts/README/CLAUDE.md 同步(desktop/README 新建;前端 scripts 只剩 start/test/android/ios/web/lint)
+- [x] 全绿收尾:backend 111 passed + ruff clean(零改动);frontend 146 passed/13 suites + tsc 0 + web 导出;桌面 BUILD SUCCEEDED(证据落 findings)
 
 ## 错误记录
 | 错误 | 尝试 | 解决 |

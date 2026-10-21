@@ -129,6 +129,17 @@ describe("buildChartHtml 注入(F3 签名升级)", () => {
   it("单参调用保持旧占位语义(向后兼容)", () => {
     expect(buildChartHtml({ times: ["2024-01-02"] })).toContain("/*__INIT__*/");
   });
+
+  it("图表主题对齐琥珀 token(深底/暗网格,不再白底)", () => {
+    const html = buildChartHtml(
+      { times: ["2024-01-02"] },
+      chartInitScript("candles"),
+    );
+    expect(html).toContain("#0B0A08"); // 背景 base-950
+    expect(html).toContain("#2C251B"); // 网格/时间轴 line
+    expect(html).not.toContain("#ffffff");
+    expect(html).not.toContain("#eeeeee");
+  });
 });
 
 describe("buildChartPayload F3 扩展", () => {

@@ -1,0 +1,12 @@
+# 依赖与产物
+node_modules/
+
+# CocoaPods 与 Xcode 构建
+macos/Pods/
+macos/build/
+macos/**/*.xcuserstate
+macos/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# React Native 本地环境
+.xcode.env.local
