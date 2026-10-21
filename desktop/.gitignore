@@ -10,3 +10,4 @@ macos/xcuserdata/
 
 # React Native 本地环境
 .xcode.env.local
+uniwind.d.ts

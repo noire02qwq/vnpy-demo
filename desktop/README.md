@@ -41,5 +41,8 @@ desktop/
 - 模板 `AppDelegate.swift` 的 `let` 属性在 `super.init()` 后赋值会编译失败(本仓库已修)
 - 本仓库目录在 FileProvider 同步盘下时,codesign 报「resource fork, Finder information …」:`xattr -cr desktop/macos/Pods` 后将产物放同步盘外(`-derivedDataPath /tmp/vndemo-dd`)即可
 - 本机 npm 有 allow-scripts 安全策略,RN CLI 的 `--allow-scripts` 会被拒 → 用模板 tarball 手工组装工程(本仓库工程已是成品,重装时直接 `npm install` 即可)
-- **Release 段已设 `USE_HERMES = false`**:uniwind 生成的虚拟 CSS 模块经 hermesc 编译后运行时初始化失败(静默,仅表现为未注册崩溃);同因 Release bundle 阶段强制 `SOURCEMAP_FILE` 空(uniwind full map 与 metro 序列化器不兼容,由 metro.transform.js 包装层兜底)
-- 双壳共源去重:metro `resolveRequest` 把 react/react-native(含深路径)锚定 desktop 副本——frontend 的 react@19.3/react-native@0.88 混入会直接 Invalid hook call;新增共享依赖若含 react/react-native 深路径引用,观察此拦截
+- **Release bundle 阶段的三个刻意设置**(见 project.pbxproj 的「Bundle React Native code and images」脚本前缀,勿删):
+  - `SOURCEMAP_FILE=`(空):uniwind full source map 与 RN 0.83 metro 序列化器不兼容(`metro.transform.js` 包装层兜底)
+  - `CONFIGURATION=Debug` + `FORCE_BUNDLING=1`:Release 内嵌 **dev bundle**——uniwind 的 prod 路径在运行时产生 `.select of undefined` 崩溃(dev 路径正常,已实测 3 分钟+ 稳定),故发布壳嵌 dev 内容;代价是包体较大与 __DEV__ 噪声,uniwind 上游修复后可回退
+- 双壳共源去重:metro `resolveRequest` 把 react(→desktop@19.2.0)与 react-native(→**react-native-macos fork**,主线缺 .macos.js 实现)含深路径全部锚定——frontend 的 react@19.3/react-native@0.88 混入会直接 Invalid hook call
+- 桌面 App 必须 `import "./global.css"`(App.tsx 首行):uniwind 的样式注册靠 css 入口模块的 `Uniwind.__reinit(...)` 执行,漏引 = className 全部无效(UI 乱叠/闪退)
