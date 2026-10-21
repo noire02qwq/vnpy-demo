@@ -350,3 +350,10 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **rnr(react-native-reusables)接入面**:支持 NativeWind **或 Uniwind**;组件复制进项目(own the code,shadcn 同款体验);基于 RN Primitives(Radix 移植);部分重组件依赖 reanimated → 选轻量组件集(button/card/input/label/tabs/switch/separator),select 类重组件用简单实现替代
 - **现有前端依赖面盘点(共享可行性核心证据,grep 实测)**:三个路由页只依赖 react/react-native/expo-router;src/components(StrategyForm/MetricCards/TradeList)只依赖 react/react-native + api 类型;src/charts 依赖 lightweight-charts(纯 TS) + react-native-webview(**官方支持 macOS ≥0.76 + 新架构**)→ **双壳共源零阻力**:src/api、src/charts、src/components 原样共享,仅需把 expo-router 页面胶水(useState/useEffect 数据流)抽为无路由依赖的共享层
 - **架构结论(候选方案 A)**:frontend/(Expo 58,iOS/Android/Web 不动)+ desktop/ 重建为 react-native-macos 0.83 独立 app(自带 package.json,版本自洽),Metro watchFolders/@source 共享 frontend/src;桌面壳不用 expo-router(裸 RN 无 Expo 模块),自建侧栏导航;Electron 在 macOS 壳功能对齐后删除
+
+## S0a spike:uniwind×Expo58 实测(2026-10-21,全通过)
+
+- `withUniwindConfig(config, { cssEntryFile: "./global.css", dtsFile?: ... })` 选项面自 `uniwind/dist/metro/index.d.ts` 实证(另有 extraThemes/polyfills/debug/isTV);`uniwind/metro` 导出存在
+- **jest 契约直接成立**:className 组件在 jest-expo(native preset)下渲染不崩、getByText 正常(className 对 RN View 是惰性 prop),无需任何 jest 侧 transform——现有测试体系零改动
+- 依赖:uniwind@1.13.0 + tailwindcss@4.3.3(npm 实装);web 导出产物含 `global-*.css` 且 token 色 `#0b0a08` 实证在包内
+- 全量回归:115 passed / 8 suites(114 基线 + 1 契约)、tsc exit 0、`CI=1 expo export -p web` 通过
