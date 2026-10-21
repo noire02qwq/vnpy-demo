@@ -63,7 +63,7 @@
 - [x] 澄清关键问题:方案 A 双壳共源 + 琥珀行情终端(用户 2026-10-21 确认)
 - [x] 方案比选与用户确认(A/B/C 比选,推荐 A 获采纳)
 - [ ] 设计 spec(docs/superpowers/specs/2026-10-21-desktop-rnmacos-shadcn-design.md)+ 自审 + 用户批准
-- [ ] 实施计划(docs/superpowers/plans/2026-10-21-*.md,writing-plans 产出)
+- [x] 实施计划(docs/superpowers/plans/2026-10-21-desktop-rnmacos-shadcn.md,Task 1-16,自审通过)
 
 ### Phase 7:TDD 实现(切片以实施计划为准)— Status: pending
 - [ ] 尾片:依赖落地 spike(uniwind × Expo 58 实测 / RN-macOS 0.83 init + uniwind 实测)+ 设计 token 落地
