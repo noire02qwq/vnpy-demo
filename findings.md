@@ -322,3 +322,9 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - API:schemas.py CROSS_TYPES 校验 sell_pct ∈ (0,100](params 内);前端 StrategyForm validateForm 镜像(mode==="cross")
 - 范围决策:TP/SL 与海龟的止损/通道离场为保护性出场保持全仓不变(spec §5.3 已注明)
 - 测试:后端 111(+6)/ 前端 112(+3),全绿
+
+## 一键启动 desktop:full(2026-10-21)
+
+- desktop/quick-start.js:健康探测(8000 已有实例复用)→ uvicorn spawn → dist 缺失自动 export → Electron dist 模式;SIGINT/Electron 退出联动清理
+- 坑:沙箱注入 ELECTRON_RUN_AS_NODE=1 被 spawn 原样继承,electron 退化纯 Node(require("electron") 失败)→ 启动前 delete 该 env(F6 同款坑第二次出现)
+- 实测:启动→healthz ok→electron 存活;SIGTERM 编排器 → 子进程全部退出、端口释放

@@ -46,7 +46,8 @@
     "web": "expo start --web",
     "desktop": "electron ../desktop/main.js",
     "desktop:dist": "DESKTOP_URL=../frontend/dist/index.html electron ../desktop/main.js",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "desktop:full": "node ../desktop/quick-start.js"
   },
   "private": true,
   "jest": {

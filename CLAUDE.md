@@ -68,7 +68,8 @@ uv run uvicorn app.main:app --reload       # 本地起服务 :8000
 npx expo start                   # 开发(iOS/Android/Web)
 npx expo export -p web           # web 构建产物 dist/
 npm test                         # jest
-npm run desktop                  # Electron 壳加载 dist/
+npm run desktop:full             # 一键:起后端 + 桌面端(推荐)
+npm run desktop                  # Electron 壳加载 dist/(需先 export)
 
 # Docker(在 docker/)
 docker compose build backend / frontend
