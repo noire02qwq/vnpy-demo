@@ -378,3 +378,12 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - 坑两枚:① UIText 内嵌 View 非法(Text 只能有 Text 子),错误文案直接用 Text+className;② 给「历史记录」加「→」装饰破坏 getByText 文本断言——文本契约从简,装饰让位测试稳定性(零回退原则)
 - StatusLine 语义收敛:null=仅品牌不显后端态(Expo 页不做探测),desktop 传真值;三屏 StatusLine per-screen 渲染(right 上下文:配置 n FORMS / 结果 RUN <id> · <n> TRADES / 历史 <n> RUNS),desktop 无需全局行,省 renderStatusLine 旗标
 - 收益率行正负着色:解析 formatMetric 结果首字符 "-" 判负(纯展示层,不动 formatMetric 契约);图表主题仅 4 色值替换(背景/文字/网格/轴),CHART_COLORS 系列色零改动;单参 buildChartHtml 不含 init 脚本,主题断言须显式传 chartInitScript(kind)
+
+## 终验(2026-10-21,Phase 6/7 收口)
+
+- **桌面构建终验**:codesign「resource fork/FinderInfo detritus」三连修后(仓库处于 FileProvider 同步盘,xattr 清一次会被回填;正解 = `xattr -cr desktop/macos/Pods` + `-derivedDataPath /tmp/vndemo-dd` 产物放盘外)`xcodebuild … build` **exit=0 + BUILD SUCCEEDED**;产物启动(PID 存活)、主动拉取 Metro macos bundle、`ReactInstance: evaluateJavaScript()` 执行(React 运行时起来)
+- **误判教训(zsh)**:`cmd | tail -n` 后 `${PIPESTATUS[0]}` 是 bash 语法,zsh 取不到 → exit 恒 0,两次把失败读成成功。纪律:后台构建一律 `> log 2>&1; echo exit=$? | tee status`
+- **codegen 生成物**:desktop/macos/build/generated 由 pod install 产出,`rm -rf build` 后必须重跑 pod install(ReactCodegen 编译依赖它);macos/.gitignore 补 `build/`
+- **终检(全绿)**:backend `111 passed, 1 warning` + ruff `All checks passed!`(零改动);frontend `146 passed/13 suites` + `tsc --noEmit` exit 0 + `CI=1 expo export -p web` 通过;桌面 `BUILD SUCCEEDED`
+- **Electron 痕迹清除**:frontend package.json(scripts 仅剩 start/test/android/ios/web/lint,devDep electron 移除);docker/ 两文件 grep 无残留;desktop/ 旧 main.js/quick-start.js 随迁移删除
+- 人工项挂账:桌面窗口 UI 视觉验收与真实回测操作(应用此刻在用户屏幕运行,后端已起)待用户确认;Debug 构建需 Metro 供包,Release 静态 bundle 列后续

@@ -17,7 +17,7 @@
 - **仓位**:信号形态买入量 = 总资金或剩余现金 × 指定百分比,股数下取整(现金硬约束)
 - **指标(对齐 docs/回测指标.tmp)**:总收益率、年化收益率、Alpha、Beta、最大回撤、年化波动率、夏普比率、信息比率(+ vnpy 原生 28 项统计)
 - **对比曲线**:总资金 / 持仓资金 / S&P500(^GSPC,可切 SPY)buy&hold 三线累计收益率,起点 0(坐标原点)
-- **前端**:Expo 一套代码(iOS/Android/Web)+ Electron 桌面壳;TradingView Lightweight Charts K 线 + EMA 叠加 + MACD/KDJ 副图
+- **前端**:Expo 一套代码(iOS/Android/Web)+ react-native-macos 原生桌面壳(双壳共享 src/,琥珀行情终端 UI:uniwind/Tailwind v4 token + shadcn 风格组件);TradingView Lightweight Charts K 线 + EMA 叠加 + MACD/KDJ 副图
 - **工程**:前后端 Docker 分别打包;回测同步返回 + SQLite 落库可查历史
 
 ## 快速开始(后端)
@@ -35,19 +35,26 @@ API 骨架:`GET /healthz`;完整 REST(`/api/v1/*`)见设计 spec §8。
 
 ## 快速开始(前端)
 
-前置:Node 18+,后端已在 :8000 运行。
+前置:Node 18+,后端已在 :8000 运行;桌面端另需 Xcode + CocoaPods(`brew install cocoapods`)。
 
 ```bash
 cd frontend
-npm install               # 安装依赖(含 devDependency electron)
+npm install               # 安装依赖
 npx expo start --web      # web 开发模式(:8081,自动开浏览器)
-npm test                  # jest 全量(109 tests)
+npm test                  # jest 全量(146 tests,含 desktop 壳纯逻辑)
 npx tsc --noEmit          # 类型检查
-
-# 桌面壳(dev 模式连 dev server;dist 模式加载静态导出)
-npm run desktop           # 需另开终端跑 npx expo start --web
-npx expo export -p web && npm run desktop:dist
 ```
+
+### 桌面端(React Native for macOS)
+
+```bash
+cd desktop
+npm install                       # 依赖(react-native-macos 0.83 + uniwind)
+npm run macos                     # 构建 + 启动(首次 pod install 较久;需 Xcode)
+```
+
+- 与 frontend 双壳共享 `frontend/src/`(api/charts/components/ui/screens),Metro watchFolders + uniwind `@source` 编译 className
+- API 地址缺省 `http://localhost:8000`(状态行显示连通状态,可点击重试)
 
 ## 当前状态(实时更新)
 
@@ -61,6 +68,7 @@ npx expo export -p web && npm run desktop:dist
 | M4 指标 + API + 落库 | ✅ 测试全绿(68 tests,Task 15-18 完成;Task 19 收尾中) |
 | M5 前端(Expo + TradingView) | ✅ 109 tests + tsc clean;web 导出 + Electron 桌面壳冒烟通过;浏览器人工联调待用户验证 |
 | M6 Docker + 端到端验收 | ✅ 双镜像构建运行 + compose 编排 + compose 环境真实回测(34 笔)+ 验收收尾;详见下方验收清单 |
+| Phase 6 桌面 RN-macOS 化 + 琥珀终端 UI 重设计(2026-10-21) | ✅ spec+计划→TDD 切片全绿(146 tests);desktop RN-macOS 0.83 构建运行;Electron 移除;详见 docs/superpowers/plans/2026-10-21-desktop-rnmacos-shadcn.md |
 
 ## 验收清单(spec §11,2026-10-20)
 
@@ -72,9 +80,9 @@ npx expo export -p web && npm run desktop:dist
 | Docker 双镜像可构建运行 | ✅ backend 1.79GB(uv frozen + ta-lib wheel)/ frontend 25.2MB(node20→nginx,SPA fallback) |
 | compose 环境真实回测 | ✅ AAPL 2023-2025 ema_cross 5/20:3.3s,34 笔,total_return 8.46%,metrics 16 键,净值曲线 752 点 |
 | 端到端浏览器联调 | ⏳ 待用户人工验证(API 层与 web 产物冒烟已全通) |
-| Electron dist(file://)跨路由 | ❌ 实测失败:Link 点击硬导航到 `file:///history` → ERR_FILE_NOT_FOUND 白屏;dev 模式与 nginx 托管 web 不受影响;待兜底(hash 路由 / Electron 内嵌 http) |
+| ~~Electron dist 跨路由~~(2026-10-21 撤销) | Electron 已被 react-native-macos 原生桌面壳替代,该缺陷随 Electron 一并移除;历史记录见 findings.md |
 
-**已知限制**:① 浏览器人工联调与 Electron dist 路由兜底待验证/待修(见上);② yfinance 限流风险(有下载日戳缓存缓解,无自动退避重试);③ 镜像仅在 arm64(macOS)实测,amd64 未测。
+**已知限制**:① 浏览器人工联调待验证(见上);② yfinance 限流风险(有下载日戳缓存缓解,无自动退避重试);③ 镜像仅在 arm64(macOS)实测,amd64 未测;④ 桌面端 Debug 构建需 Metro(`npm start`)供包,Release 打静态 bundle 待后续。
 
 测试:105 passed(backend)+ 109 passed(frontend);ruff clean;每任务 TDD(先红后绿)+ 评审后提交推送。
 
@@ -95,4 +103,4 @@ task_plan.md / findings.md / progress.md   # planning-with-files 持久化计划
 
 ## 技术栈
 
-Python 3.12 + uv|FastAPI|vnpy 4.5.0 + vnpy_ctastrategy 1.4.1|yfinance 1.7|pandas 3 / numpy|SQLAlchemy 2 + SQLite|pytest + ruff|Expo(React Native)|TradingView Lightweight Charts|Electron|Docker
+Python 3.12 + uv|FastAPI|vnpy 4.5.0 + vnpy_ctastrategy 1.4.1|yfinance 1.7|pandas 3 / numpy|SQLAlchemy 2 + SQLite|pytest + ruff|Expo(React Native)|react-native-macos 0.83(桌面)|uniwind + Tailwind v4|TradingView Lightweight Charts|Docker

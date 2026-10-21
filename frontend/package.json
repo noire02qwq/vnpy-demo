@@ -35,7 +35,6 @@
     "@testing-library/react-native": "^14.1.0",
     "@types/jest": "30.0.0",
     "@types/react": "~19.3.0",
-    "electron": "^44.9.1",
     "jest": "~30.5.2",
     "jest-expo": "~58.0.11",
     "typescript": "~6.0.3"
@@ -46,15 +45,14 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "desktop": "electron ../desktop/main.js",
-    "desktop:dist": "DESKTOP_URL=../frontend/dist/index.html electron ../desktop/main.js",
-    "lint": "expo lint",
-    "desktop:full": "node ../desktop/quick-start.js"
+    "lint": "expo lint"
   },
   "private": true,
   "jest": {
     "preset": "jest-expo",
-    "modulePaths": ["<rootDir>/node_modules"],
+    "modulePaths": [
+      "<rootDir>/node_modules"
+    ],
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|lightweight-charts))"
     ]

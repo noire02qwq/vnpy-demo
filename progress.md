@@ -77,3 +77,14 @@
 - [x] 设计 spec 落盘并自审通过(docs/superpowers/specs/2026-10-21-desktop-rnmacos-shadcn-design.md)
 - [x] 用户批准「自主推进」;拉 feat-desktop-rn-macos 分支(本机钩子禁分支名含 /)
 - [ ] S0 spike:uniwind×Expo58 / macos-init+webview / rnr CLI
+
+## 会话 2026-10-21(S0-S4 执行,桌面 RN-macOS + 琥珀终端)
+
+- [x] S0:S0a uniwind×Expo58 全通(jest 零改动/web 导出含 token css);S0b macos-init 手工组装(npm allow-scripts 策略 + peer 钉 0.83.10 两坑)+ 构建 exit=0 + webview 冒烟;S0c rnr CLI→自研轻量件
+- [x] S1 token/ui:global.css token + theme.ts(monoFontFor 纯函数)+ cn + 8 组件(Text/Button/Separator/Card/Input/Label/Segmented/StatusLine),全 TDD
+- [x] S2 screens 抽取:三页薄壳化(pages.test 整链保留 + screens.test 直渲层,135→146 绿)
+- [x] S3 重设计:StrategyForm/三屏 className 化 + StatusLine signature + 图表主题 4 色对齐(138 绿时点)
+- [x] S4 desktop 源码:navigation/health TDD(146 绿)+ App.tsx 侧栏 + metro uniwind;真实 bundle 5.78MB 编译通过(跨包 import + uniwind 实证)
+- [x] 用户环境协作:Xcode 27.1 安装 + xcode-select/license(sudo 用户操作);本机无 CocoaPods→brew 装
+- [x] codesign 三连修:resource fork detritus(仓库在 FileProvider 同步盘)→ xattr -cr Pods + 产物放 /tmp
+- [ ] 桌面构建终验 + Electron 移除收尾 + 全绿终检 + 合 main
