@@ -5,7 +5,8 @@
   "description": "vn-demo 桌面壳:react-native-macos(共享 frontend/src,琥珀行情终端)",
   "scripts": {
     "start": "react-native start",
-    "macos": "react-native run-macos"
+    "macos": "react-native run-macos",
+    "macos:release": "react-native run-macos --mode Release"
   },
   "dependencies": {
     "react": "19.2.0",

@@ -387,3 +387,19 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **终检(全绿)**:backend `111 passed, 1 warning` + ruff `All checks passed!`(零改动);frontend `146 passed/13 suites` + `tsc --noEmit` exit 0 + `CI=1 expo export -p web` 通过;桌面 `BUILD SUCCEEDED`
 - **Electron 痕迹清除**:frontend package.json(scripts 仅剩 start/test/android/ios/web/lint,devDep electron 移除);docker/ 两文件 grep 无残留;desktop/ 旧 main.js/quick-start.js 随迁移删除
 - 人工项挂账:桌面窗口 UI 视觉验收与真实回测操作(应用此刻在用户屏幕运行,后端已起)待用户确认;Debug 构建需 Metro 供包,Release 静态 bundle 列后续
+
+## 桌面端空白根因更正与终修(2026-10-21,systematic-debugging 第二轮)
+
+- **「上游 reload 缺陷」判断作废(诚实更正)**:spike 复现实验被污染——spike 工程经我手同样把 app.json name 写成大写 "VndemoDesktop",复现的是同一个注册失败,与 reload 无关的假阳性。教训:对照实验的对照组必须逐字段确认干净
+- **真根因(应用名大小写不匹配)**:迁移重命名时 app.json name="VndemoDesktop",而 macos 工程按包名生成 `AppDelegate.swift:58 view(withModuleName: "vndemodesktop")`(小写)→ `AppRegistry.runApplication("vndemodesktop")` 找不到注册键 → **从第一个包起每次启动都必然失败**;Debug 下表现为 invariant + 死 surface(即用户看到的空白与弹窗)。修复 = app.json name 对齐小写
+- **第二根因(双 React 副本)**:名字修复后露出真容——desktop react@19.2.0 vs frontend react@19.3.0,共享 screens 从 frontend 树解析到 19.3 → `Invalid hook call`(栈:ConfigScreen → useState → resolveDispatcher)。修法踩坑两步:`extraNodeModules` 只是**回退**(frontend/src 沿目录树常规解析先命中,挡不住);`resolveRequest` 硬拦截又踩「包根目录路径 SHA-1 失败」「react/jsx-runtime 无扩展名」两坑 → 终版 = 裸名+深路径统一 `resolveLocalFile(dir, sub)` 候选扩展名解析(jsx-runtime.js/Libraries/… 全覆盖)
+- **第三修复(uniwind × Release sourcemap)**:uniwind transformer 给图内模块注入 full source map 对象,RN 0.83 metro 序列化器只认 VLQ 数组(`Unexpected module with full source map found: require.js`),`--dev false` 必挂(与 sourcemap-output 参数无关);判别 = 裸配置成功/uniwind 失败 × dev=true 成功。修法 = `transformerPath` 在 withUniwindConfig 之后包一层 `metro.transform.js`(丢弃非数组 map;注意 uniwind exports map 不放行子路径,须经 package.json 定位绝对路径 require)
+- **验证**:Debug+Metro(名字修复 + React 去重)进程存活、四类错误(SHA-1/SyntaxError/Invalid hook/Invariant)全零;Release 重建见下
+- proxy 503 结论保留:Debug 形态拉 Metro 包会被系统代理截杀(503 localhost),但那只是 Debug 的坑;Release 静态包 + 应用自身 fetch localhost:8000 仍受代理影响(待用户加白名单后 API 才通)
+
+## 桌面 Release 终修:第 4 层 = Hermes(2026-10-21)
+
+- Release 包(app.json 修复后)仍崩同一 invariant → 逐层判别剩 Hermes:`USE_HERMES=true` 时 bundle 经 hermesc 编译为字节码,**uniwind 生成的虚拟 CSS 模块在 hermesc 产物中运行时初始化失败**(静默,只表现为下游未注册);`USE_HERMES=false`(Release 段)→ Release 应用存活零错误
+- 终态四层修复栈:① app.json name 大小写对齐 moduleName;② metro resolveRequest 锚定单 React 副本(desktop 19.2.0,含深路径 react-native/Libraries/… 与 react/jsx-runtime 的候选扩展名解析);③ metro.transform.js 丢弃 uniwind full map(Release sourcemap 序列化兼容);④ Release 段 USE_HERMES=false
+- 终验:Release 应用(无 Metro)进程存活、错误零;frontend 146 passed + tsc 0(未受影响)
+- 待用户:系统代理把 localhost/127.0.0.1 加直连白名单(否则应用内 API 调用 fetch localhost:8000 走代理 503 → 状态行 OFFLINE;healthz 探测同理)

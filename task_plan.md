@@ -76,4 +76,10 @@
 ## 错误记录
 | 错误 | 尝试 | 解决 |
 |---|---|---|
-| (暂无) | | |
+| RN CLI init 被本机 npm allow-scripts 策略拒(EALLOWSCRIPTS) | 1 | 模板 tarball 手工组装工程 |
+| react-native-macos@0.83.0 eresolve(peer 钉 RN 0.83.10) | 1 | react-native 升 0.83.10 后重装 |
+| AppDelegate.swift let 属性 super.init() 后赋值编译错 | 1 | 赋值挪到 super.init() 前(Swift 两段式) |
+| codesign「resource fork/FinderInfo detritus」 | 2 | xattr -cr Pods + 产物放同步盘外(/tmp derivedData);另 pod install 需重跑以重建 build/generated |
+| 后台构建退出码被管道 tail 掩盖(zsh 无 PIPESTATUS) | 2 | 统一 `> log 2>&1; echo exit=$? \| tee status` 模式 |
+| 桌面端空白/reload 循环(用户报告) | 4 | **四因叠加(初判「上游 reload 缺陷」为 spike 污染的假阳性,已更正)**:① app.json name 大小写 ≠ AppDelegate moduleName → 注册必败(空白+弹窗主因);② 双 React 副本 → Invalid hook call(resolveRequest 锚定修复);③ uniwind full map × Release 序列化器冲突(metro.transform.js 修复);④ Hermes 字节码 × uniwind 生成码(Release USE_HERMES=false);系统代理 503 localhost 另记(需用户白名单) |
+| Release 打包 PhaseScriptExecution 失败:metro-source-map「Unexpected module with full source map」 | 1 | uniwind transformer 产出 full map × Release sourcemap 序列化冲突;pbxproj bundle 阶段前置 export SOURCEMAP_FILE=(空),Release 不产 sourcemap |

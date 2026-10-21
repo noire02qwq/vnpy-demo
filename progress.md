@@ -88,3 +88,12 @@
 - [x] 用户环境协作:Xcode 27.1 安装 + xcode-select/license(sudo 用户操作);本机无 CocoaPods→brew 装
 - [x] codesign 三连修:resource fork detritus(仓库在 FileProvider 同步盘)→ xattr -cr Pods + 产物放 /tmp
 - [ ] 桌面构建终验 + Electron 移除收尾 + 全绿终检 + 合 main
+
+## 会话 2026-10-21(systematic-debugging:桌面端空白+reload 修复)
+
+- [x] Phase 1 取证:Fusebox inspector 抓弹窗原文(注册 invariant)、受控 touch 实验、60s 静止观察窗、scutil/lsof 代理取证
+- [x] 根因四层(全部实证):① app.json name 大小写 ≠ AppDelegate moduleName(主因,首个包起必败);② 双 React 副本(19.2/19.3)→ Invalid hook call;③ uniwind full map × Release sourcemap 序列化;④ Hermes 字节码 × uniwind 生成码
+- [x] 「上游 reload 缺陷」假阳性已更正(spike 对照组被同一改名 bug 污染;教训入 findings)
+- [x] 修复:app.json 对齐小写 / metro resolveRequest 锚定单 React(含深路径扩展名解析)/ metro.transform.js 兜 full map / Release USE_HERMES=false + SOURCEMAP_FILE 空
+- [x] 终验:纯净 Release(prod bundle 1.19MB、无 Metro)进程存活零错误;frontend 146 绿 + tsc 0
+- [ ] 用户侧:代理加 localhost 白名单后应用内 API 才通(状态行 OFFLINE → ONLINE 可验证)

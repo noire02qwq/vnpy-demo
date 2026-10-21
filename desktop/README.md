@@ -12,10 +12,16 @@ vn-demo 的原生 macOS 客户端(替代早期 Electron 壳):**react-native-maco
 
 ```bash
 cd desktop
-npm install          # 依赖(react-native-macos 0.83 / uniwind / react-native-webview)
-npm run macos        # 构建 + 启动(首次 pod install 较久)
-npm start            # Metro :8081(Debug 构建需它供 JS 包;Release 打静态 bundle 属后续项)
+npm install              # 依赖(react-native-macos 0.83 / uniwind / react-native-webview)
+npm run macos:release    # 日常推荐:Release 构建(JS 静态打包,不依赖 Metro/代理,无 reload 缺陷)
+npm run macos            # Debug 构建(开发用,需 Metro;有下述两坑)
+npm start                # Metro :8081(仅 Debug 需要)
 ```
+
+**日常请用 `macos:release`。** Debug 构建有两个已实证的坑(细节见根 findings.md「桌面端空白+reload 调查」):
+
+1. **系统代理劫持 localhost**:本机代理(127.0.0.1:1082)对 localhost 回源直接 503,Debug 构建的 JS 包请求经 NSURLSession 走代理 → 永不执行 → 空白。修复:代理软件把 `localhost/127.0.0.1` 加直连白名单,或 `networksetup -setproxybypassdomains <网络服务名> localhost 127.0.0.1`
+2. **上游 reload 缺陷**:react-native-macos 0.83 的 dev 模式 surface reload 会撞 `Invariant Violation: "…" has not been registered`(官方裸模板同样复现,非本项目代码问题);文件一变动就触发 reload → 空白+弹窗。Debug 模式下避免在运行中改文件,改动后重启 app
 
 ## 结构
 
@@ -35,3 +41,5 @@ desktop/
 - 模板 `AppDelegate.swift` 的 `let` 属性在 `super.init()` 后赋值会编译失败(本仓库已修)
 - 本仓库目录在 FileProvider 同步盘下时,codesign 报「resource fork, Finder information …」:`xattr -cr desktop/macos/Pods` 后将产物放同步盘外(`-derivedDataPath /tmp/vndemo-dd`)即可
 - 本机 npm 有 allow-scripts 安全策略,RN CLI 的 `--allow-scripts` 会被拒 → 用模板 tarball 手工组装工程(本仓库工程已是成品,重装时直接 `npm install` 即可)
+- **Release 段已设 `USE_HERMES = false`**:uniwind 生成的虚拟 CSS 模块经 hermesc 编译后运行时初始化失败(静默,仅表现为未注册崩溃);同因 Release bundle 阶段强制 `SOURCEMAP_FILE` 空(uniwind full map 与 metro 序列化器不兼容,由 metro.transform.js 包装层兜底)
+- 双壳共源去重:metro `resolveRequest` 把 react/react-native(含深路径)锚定 desktop 副本——frontend 的 react@19.3/react-native@0.88 混入会直接 Invalid hook call;新增共享依赖若含 react/react-native 深路径引用,观察此拦截
