@@ -161,13 +161,14 @@ describe("ConfigScreen(无路由依赖)", () => {
 });
 
 describe("ResultScreen(无路由依赖)", () => {
-  it("渲染详情(标题/指标/图表区块)", async () => {
+  it("渲染详情(标题/指标/图表区块/状态行上下文)", async () => {
     mockGetRun.mockResolvedValue(sampleResult);
     const screen = await render(<ResultScreen runId="run-1" onBack={jest.fn()} />);
     expect(await screen.findByText("AAPL · macd_cross")).toBeTruthy();
     expect(screen.getByText("总收益率")).toBeTruthy();
     expect(screen.getByText("MACD")).toBeTruthy();
     expect(screen.getByText("成交明细")).toBeTruthy();
+    expect(screen.getByText("RUN run-1 · 1 TRADES")).toBeTruthy();
   });
 
   it("加载失败呈现失败态,返回回调 onBack", async () => {
@@ -181,7 +182,7 @@ describe("ResultScreen(无路由依赖)", () => {
 });
 
 describe("HistoryScreen(无路由依赖)", () => {
-  it("列表行点击回调 onOpenRun,返回配置回调 onNavigateConfig", async () => {
+  it("列表行点击回调 onOpenRun,返回配置回调 onNavigateConfig,状态行计数", async () => {
     mockListRuns.mockResolvedValue({ items: [runSummary], total: 1 });
     const onOpenRun = jest.fn();
     const onNavigateConfig = jest.fn();
@@ -189,6 +190,7 @@ describe("HistoryScreen(无路由依赖)", () => {
       <HistoryScreen onOpenRun={onOpenRun} onNavigateConfig={onNavigateConfig} />,
     );
     await screen.findByText("AAPL");
+    expect(screen.getByText("1 RUNS")).toBeTruthy();
     fireEvent.press(screen.getByText("返回配置"));
     expect(onNavigateConfig).toHaveBeenCalledTimes(1);
     fireEvent.press(screen.getByText("AAPL"));

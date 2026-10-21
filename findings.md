@@ -371,3 +371,10 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - **环境三坑(复盘)**:① 本机 npm allow-scripts 策略拦 CLI 临时安装 → 手工组装模板;② react-native-macos@0.83.0 peer 钉 react-native@0.83.10(模板默认 0.83.0 必冲突);③ 后台命令 `run-macos | tail` 把真实退出码吃掉,首次"成功"实为失败——后续构建一律 `> log 2>&1; echo exit=$?` 模式;Xcode 27.1 需 xcode-select 切换 + license accept(用户操作),DEVELOPER_DIR 可免 sudo 临时切换
 - **screens 抽取偏离计划的改进**:pages.test.tsx 原样保留(穿透薄壳+屏幕的整链回归,零改动证明零行为回退),另加 screens.test.tsx 直渲三屏(证明无 expo-router 依赖 + 回调接线);比单纯迁移覆盖更强。教训:ResultScreen 的「返回」按钮只在失败态存在,成功态直渲断言写错了位置
 - 测试规模:130 → 135(+5:config 2/result 2/history 1);12 suites 全绿,tsc exit 0;三页薄壳化完成(app/index.tsx 15 行、result/[id].tsx 15 行、history.tsx 14 行)
+
+## S3 三页重设计(2026-10-21)
+
+- StrategyForm 逻辑函数(validateForm/buildRequest/createInitialState)逐字保留,渲染层换 ui 件;EnumSelect native 分支 chips→Segmented,web 分支保留原生 <select>(琥珀配色走 DOM style,fontSize/fontFamily 直设)
+- 坑两枚:① UIText 内嵌 View 非法(Text 只能有 Text 子),错误文案直接用 Text+className;② 给「历史记录」加「→」装饰破坏 getByText 文本断言——文本契约从简,装饰让位测试稳定性(零回退原则)
+- StatusLine 语义收敛:null=仅品牌不显后端态(Expo 页不做探测),desktop 传真值;三屏 StatusLine per-screen 渲染(right 上下文:配置 n FORMS / 结果 RUN <id> · <n> TRADES / 历史 <n> RUNS),desktop 无需全局行,省 renderStatusLine 旗标
+- 收益率行正负着色:解析 formatMetric 结果首字符 "-" 判负(纯展示层,不动 formatMetric 契约);图表主题仅 4 色值替换(背景/文字/网格/轴),CHART_COLORS 系列色零改动;单参 buildChartHtml 不含 init 脚本,主题断言须显式传 chartInitScript(kind)

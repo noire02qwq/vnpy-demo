@@ -66,8 +66,9 @@
 - [x] 实施计划(docs/superpowers/plans/2026-10-21-desktop-rnmacos-shadcn.md,Task 1-16,自审通过)
 
 ### Phase 7:TDD 实现(切片以实施计划为准)— Status: pending
-- [ ] 尾片:依赖落地 spike(uniwind × Expo 58 实测 / RN-macOS 0.83 init + uniwind 实测)+ 设计 token 落地
-- [ ] UI 组件层(rnr 轻量集复制进 frontend/src/ui + token 化)+ 三页 className 化重设计
+- [x] S0 spike 全通:uniwind×Expo58(jest 零改动)/ RN-macOS 0.83 构建 exit=0 + webview 冒烟 / rnr→自研轻量件;token 落地(theme.ts + cn + global.css)
+- [x] ui 组件层:Text/Button/Separator/Card/Input/Label/Segmented/StatusLine(138 测试含组件与 screens 层)
+- [x] S2/S3:screens 抽取 + 三页琥珀终端重设计 + 图表主题对齐(137→138 绿,tsc 0,web 导出过)
 - [ ] desktop/:RN-macOS 壳(侧栏导航 + 共享 src/)+ 图表 WebView 验证
 - [ ] Electron 移除 + scripts/README/CLAUDE.md 同步
 - [ ] 全绿收尾(backend 不动保持 111;frontend jest 全绿 + tsc;macOS 壳构建冒烟)

@@ -2,6 +2,7 @@
  * 历史页页面体(双壳共源):listRuns(1, 20) 分页首页,FlatList 展示标的/形态/
  * 创建日期(前 10 位)/总收益率;行点击回调 onOpenRun;行内「删除」按钮
  * deleteRun 成功后刷新列表;空态「暂无回测记录」;顶部回调 onNavigateConfig。
+ * 视觉:琥珀行情终端(mono 等宽数据行;收益率正 up 负 down;状态行 <n> RUNS)。
  * 自 app/history.tsx 迁入,行为不变;导航经 props 回调注入(不依赖 expo-router)。
  */
 import { useCallback, useEffect, useState } from "react";
@@ -9,6 +10,8 @@ import { Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native
 import type { ListRenderItem } from "react-native";
 import { ApiError, deleteRun, errorMessage, listRuns } from "../api/client";
 import { formatMetric } from "../components/MetricCards";
+import { StatusLine } from "../ui/StatusLine";
+import { FONT_MONO } from "../ui/theme";
 import type { RunSummary } from "../api/types";
 
 /** 未知异常 → 错误码(仅 ApiError 携带 code;其余走 errorMessage 兜底文案) */
@@ -25,9 +28,18 @@ export interface HistoryScreenProps {
   onOpenRun: (runId: string) => void;
   /** 请求返回配置页 */
   onNavigateConfig: () => void;
+  /** desktop 壳探测结果;缺省不渲染后端状态(Expo 页) */
+  backendOk?: boolean | null;
+  /** desktop 壳重试探测回调 */
+  onProbeBackend?: () => void;
 }
 
-export function HistoryScreen({ onOpenRun, onNavigateConfig }: HistoryScreenProps) {
+export function HistoryScreen({
+  onOpenRun,
+  onNavigateConfig,
+  backendOk = null,
+  onProbeBackend,
+}: HistoryScreenProps) {
   const [items, setItems] = useState<RunSummary[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -57,27 +69,31 @@ export function HistoryScreen({ onOpenRun, onNavigateConfig }: HistoryScreenProp
     }
   };
 
-  const renderItem: ListRenderItem<RunSummary> = ({ item }) => (
-    <View style={styles.rowWrapper}>
-      <Pressable style={styles.row} onPress={() => onOpenRun(item.id)}>
-        <Text style={styles.symbol}>{item.request.symbol}</Text>
-        <Text style={styles.type}>{item.request.strategy.type}</Text>
-        <Text style={styles.date}>{item.created_at.slice(0, 10)}</Text>
-        <Text style={styles.returnText}>
-          {formatMetric("total_return", item.metrics.total_return)}
-        </Text>
-      </Pressable>
-      <Pressable
-        style={styles.delete}
-        disabled={deletingId !== null}
-        onPress={() => {
-          void handleDelete(item.id);
-        }}
-      >
-        <Text style={styles.deleteText}>删除</Text>
-      </Pressable>
-    </View>
-  );
+  const renderItem: ListRenderItem<RunSummary> = ({ item }) => {
+    const returnText = formatMetric("total_return", item.metrics.total_return);
+    const negative = returnText.trimStart().startsWith("-");
+    return (
+      <View style={styles.rowWrapper}>
+        <Pressable style={styles.row} onPress={() => onOpenRun(item.id)}>
+          <Text style={styles.symbol}>{item.request.symbol}</Text>
+          <Text style={styles.type}>{item.request.strategy.type}</Text>
+          <Text style={styles.date}>{item.created_at.slice(0, 10)}</Text>
+          <Text style={[styles.returnText, negative ? styles.down : styles.up]}>
+            {returnText}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={styles.delete}
+          disabled={deletingId !== null}
+          onPress={() => {
+            void handleDelete(item.id);
+          }}
+        >
+          <Text style={styles.deleteText}>删除</Text>
+        </Pressable>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.page}>
@@ -90,32 +106,46 @@ export function HistoryScreen({ onOpenRun, onNavigateConfig }: HistoryScreenProp
         renderItem={renderItem}
         ListEmptyComponent={<Text style={styles.empty}>暂无回测记录</Text>}
       />
+      <StatusLine
+        backendOk={backendOk}
+        onRetry={onProbeBackend}
+        right={`${items.length} RUNS`}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, padding: 16 },
-  linkText: { fontSize: 14, color: "#1C6EFE", paddingVertical: 6 },
+  page: { flex: 1, backgroundColor: "#0B0A08" },
+  linkText: { fontSize: 13, color: "#F2A33C", paddingVertical: 8, paddingHorizontal: 16 },
   rowWrapper: {
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderColor: "#EEEEEE",
+    borderColor: "#2C251B",
   },
   row: { flex: 1, flexDirection: "row", alignItems: "center", paddingVertical: 10 },
-  symbol: { flex: 1.2, fontSize: 14, fontWeight: "600" },
-  type: { flex: 1.4, fontSize: 13, color: "#333333" },
-  date: { flex: 1.2, fontSize: 12, color: "#666666" },
-  returnText: { flex: 1, fontSize: 13, textAlign: "right", fontWeight: "600" },
+  symbol: {
+    flex: 1.2,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#EDE4D3",
+    fontFamily: FONT_MONO,
+  },
+  type: { flex: 1.4, fontSize: 13, color: "#9A8E78" },
+  date: { flex: 1.2, fontSize: 12, color: "#9A8E78", fontFamily: FONT_MONO },
+  returnText: { flex: 1, fontSize: 13, textAlign: "right", fontWeight: "600", fontFamily: FONT_MONO },
+  up: { color: "#E5484D" },
+  down: { color: "#3DD68C" },
   delete: {
     marginLeft: 8,
+    marginRight: 12,
     borderWidth: 1,
-    borderColor: "#EF5350",
+    borderColor: "#E5484D",
     borderRadius: 6,
     paddingVertical: 4,
     paddingHorizontal: 10,
   },
-  deleteText: { fontSize: 12, color: "#EF5350" },
-  empty: { fontSize: 14, color: "#666666", paddingVertical: 16 },
+  deleteText: { fontSize: 12, color: "#E5484D" },
+  empty: { fontSize: 14, color: "#9A8E78", paddingVertical: 16, paddingHorizontal: 16 },
 });

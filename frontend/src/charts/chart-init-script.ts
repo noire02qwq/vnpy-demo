@@ -60,9 +60,10 @@ const ZIP_HELPER =
 /** 图表基础选项:自适应容器 + 浅色主题 */
 const CHART_OPTIONS =
   'autoSize:true,' +
-  'layout:{background:{type:"solid",color:"#ffffff"},textColor:"#333333"},' +
-  'grid:{vertLines:{color:"#eeeeee"},horzLines:{color:"#eeeeee"}},' +
-  'timeScale:{borderColor:"#dddddd"},rightPriceScale:{borderColor:"#dddddd"}';
+  // 琥珀终端 token:背景 base-950、文字 ink-dim、网格/轴 line(spec §4.1;仅主题色,系列配色不动)
+  'layout:{background:{type:"solid",color:"#0B0A08"},textColor:"#9A8E78"},' +
+  'grid:{vertLines:{color:"#2C251B"},horzLines:{color:"#2C251B"}},' +
+  'timeScale:{borderColor:"#2C251B"},rightPriceScale:{borderColor:"#2C251B"}';
 
 const CREATE_CHART =
   `var chart=LightweightCharts.createChart(document.getElementById("chart"),{${CHART_OPTIONS}});`;
