@@ -155,16 +155,16 @@ describe("buildChartPayload", () => {
     expect("kdj" in json).toBe(false);
   });
 
-  it("lines 归一化:equity/position 为相对 initial_capital 的累计收益率 %,benchmark(% 口径)原样", () => {
+  it("lines 归一化:equity 为累计收益率 %;position 为占初始资金 %(不减现金,起点 0);benchmark 原样", () => {
     const p: ChartPayload = buildChartPayload(makeResult());
-    // 1_010_000/1_000_000 - 1 → +1%,1_005_000 → +0.5%;持仓 0/50 万/48 万 → -100/-50/-52%
+    // 1_010_000/1_000_000 - 1 → +1%,1_005_000 → +0.5%;持仓 0/50 万/48 万 → 占比 0/50/48%
     [0, 1, 0.5].forEach((want, i) => expect(p.lines.equity[i]).toBeCloseTo(want, 9));
-    [-100, -50, -52].forEach((want, i) => expect(p.lines.position[i]).toBeCloseTo(want, 9));
+    [0, 50, 48].forEach((want, i) => expect(p.lines.position[i]).toBeCloseTo(want, 9));
     expect(p.lines.benchmark).toEqual([0, 1.2, 0.8]);
     expect(p.times).toEqual(["2024-01-02", "2024-01-03", "2024-01-04"]);
   });
 
-  it("归一化口径:equity 1_050_000 / capital 1_000_000 → 末值 ≈ 5.0(spec §7 三线同轴累计收益率 %)", () => {
+  it("归一化口径:equity 1_050_000 / capital 1_000_000 → 末值 ≈ 5.0;持仓 60 万 → 占比 60(起点 0)", () => {
     const result = makeResult();
     result.curves = {
       ...result.curves,
@@ -174,7 +174,8 @@ describe("buildChartPayload", () => {
     const p: ChartPayload = buildChartPayload(result);
     expect(p.lines.equity[0]).toBeCloseTo(0, 9);
     expect(p.lines.equity[1]).toBeCloseTo(5.0, 9);
-    expect(p.lines.position[1]).toBeCloseTo(-40, 9);
+    expect(p.lines.position[0]).toBeCloseTo(0, 9);
+    expect(p.lines.position[1]).toBeCloseTo(60, 9);
   });
 });
 

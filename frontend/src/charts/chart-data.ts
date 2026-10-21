@@ -121,6 +121,11 @@ function toCumReturnPct(values: number[], initialCapital: number): number[] {
   return values.map((v) => (v / initialCapital - 1) * 100);
 }
 
+/** 占初始资金百分比(v/capital×100,不减现金):持仓市值线口径,起点 0 */
+function toPctOfCapital(values: number[], initialCapital: number): number[] {
+  return values.map((v) => (v / initialCapital) * 100);
+}
+
 /**
  * 打包图表数据包:candles + 可选 ema/macd/kdj + 三线对比序列 + 时间轴。
  * 三线统一为累计收益率 % 同轴:equity/position_value 由绝对资金额除以 initial_capital
@@ -143,7 +148,7 @@ export function buildChartPayload(result: BacktestResult): ChartPayload {
     ...(result.trades.length > 0 ? { markers: toMarkers(result.trades) } : {}),
     lines: {
       equity: toCumReturnPct(result.curves.equity, capital),
-      position: toCumReturnPct(result.curves.position_value, capital),
+      position: toPctOfCapital(result.curves.position_value, capital),
       benchmark: result.curves.benchmark,
     },
     times: result.candles.dates,

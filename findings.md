@@ -328,3 +328,10 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - desktop/quick-start.js:健康探测(8000 已有实例复用)→ uvicorn spawn → dist 缺失自动 export → Electron dist 模式;SIGINT/Electron 退出联动清理
 - 坑:沙箱注入 ELECTRON_RUN_AS_NODE=1 被 spawn 原样继承,electron 退化纯 Node(require("electron") 失败)→ 启动前 delete 该 env(F6 同款坑第二次出现)
 - 实测:启动→healthz ok→electron 存活;SIGTERM 编排器 → 子进程全部退出、端口释放
+
+## 迭代:持仓资金线口径修正(2026-10-21)
+
+- 用户反馈:三线对比图持仓资金线套用「减初始现金」收益率变换(pv/capital−1),空仓日 pv=0 → 从 −100 开始,且语义错误
+- 修正:chart-data.ts 新增 toPctOfCapital(占初始资金 %,不减现金,起点 0),position 线改用;equity/benchmark 仍为累计收益率 %
+- 图例更新:「持仓资金(占初始资金%)」+ 说明文字区分两种口径
+- 纯前端展示层修正,后端 curves.position_value 契约不变;前端 114 tests 全绿

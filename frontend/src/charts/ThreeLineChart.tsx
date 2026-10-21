@@ -1,5 +1,6 @@
 /**
- * 三线对比图(总资金/持仓资金/S&P500;三线均为相对 initial_capital 的累计收益率 %,
+ * 三线对比图(总资金/持仓资金/S&P500;equity 与 benchmark 为累计收益率 %,
+ * 持仓资金为占初始资金 %——不减现金,空仓日为 0),
  * 起点 0,spec §7 同轴口径),web/native 同构:内部复用 LightChart 的 lines 模式
  * (import "./LightChart" 经 Metro 平台扩展解析到 LightChart.web/native 对应实现),
  * 并附图例文字标签与单位说明。
@@ -12,12 +13,12 @@ import type { BacktestResult } from "../api/types";
 /** 三线图例(与 lines 模式的 series 顺序、配色一一对应) */
 const LEGEND = [
   { label: "总资金", color: CHART_COLORS.equity },
-  { label: "持仓资金", color: CHART_COLORS.position },
+  { label: "持仓资金(占初始资金%)", color: CHART_COLORS.position },
   { label: "S&P500", color: CHART_COLORS.benchmark },
 ] as const;
 
 /** 图例单位说明(三线已归一化同轴,避免误读为绝对资金额) */
-const LEGEND_NOTE = "三线均为累计收益率 %,起点 0";
+const LEGEND_NOTE = "总资金/S&P500 为累计收益率 %,持仓资金为占初始资金 %(起点 0)";
 
 export function ThreeLineChart({ result }: { result: BacktestResult }) {
   return (
