@@ -335,3 +335,18 @@ D1-D9 详见 task_plan.md 决策表。补充:
 - 修正:chart-data.ts 新增 toPctOfCapital(占初始资金 %,不减现金,起点 0),position 线改用;equity/benchmark 仍为累计收益率 %
 - 图例更新:「持仓资金(占初始资金%)」+ 说明文字区分两种口径
 - 纯前端展示层修正,后端 curves.position_value 契约不变;前端 114 tests 全绿
+
+## 桌面 RN-macOS + shadcn/tailwind 调研(2026-10-21,第一轮)
+
+- **react-native-macos 版本断层(核心约束)**:微软仓库最新 release 0.77.4 / 0.78.x(2025-07),本项目 frontend 为 Expo SDK 58 / **RN 0.88**;react-native-macos 是 RN 的 fork,**版本必须与 react-native 严格对齐**,塞不进现有 Expo 58 工程;Expo 官方无 `prebuild -p macos`("additional platform support" 文档仅面向自定义 native module,非 app 目标;expo/expo#22273 讨论仍 open)
+- **react-native-webview**:官方兼容 iOS/Android/**macOS**/Windows,要求 New Architecture(Fabric)+ react-native-macos ≥ 0.76 → 0.78 可用,**WebView 承载 LightweightCharts 的图表方案可平移到 macOS 壳**
+- **NativeWind**:v4.2.7(Tailwind 3)官宣支持到 Expo SDK 57(RN 0.81);v5.0.0-rc.0(配 css-interop 3.1.0-rc.0,须成对精确安装)目标也是 SDK 57;**SDK 58 / RN 0.88 支持未官宣,存在风险**
+- **react-native-reusables(rnr,shadcn/ui for RN)**:活跃,组件复制进项目(own the code),支持 NativeWind 或 **Uniwind**(新引擎),Expo 通用模板起步;同款组件名与 shadcn/ui 对齐
+
+## 桌面 RN-macOS + shadcn/tailwind 调研(2026-10-21,第二轮定论)
+
+- **react-native-macos 版本线修正(npm 为事实源)**:dist-tags `latest=0.83.0`、`0.81-stable=0.81.9`、`0.79-stable=0.79.4`、`0.78-stable=0.78.6`;GitHub releases 页信息滞后(只显示到 0.77/0.78)。`react-native-macos-init@2.1.3`;官方流程 = `@react-native-community/cli init <name> --version <RN版本>` → `npx react-native-macos-init` 补 macOS target
+- **uniwind@1.13.0(定论:双端统一 tailwind 引擎)**:peer `react>=19 / react-native>=0.81 / tailwindcss>=4 / metro|@expo/metro-config=*` → Expo 58(RN 0.88)满足;Tailwind v4 only;无 babel preset;Metro 插件 `withUniwindConfig({cssEntryFile, dtsFile})`;`@source` 支持跨目录扫描(monorepo 共享组件的关键);支持 iOS/Android/tvOS/**Web**/**Desktop(macOS/Windows)**、Expo(含 Expo Go)/裸 RN/monorepo;有平台选择器;社区已有 rn-macos+uniwind 模板实证;NativeWind(无 macOS 支持,官宣止步 SDK 57)被否
+- **rnr(react-native-reusables)接入面**:支持 NativeWind **或 Uniwind**;组件复制进项目(own the code,shadcn 同款体验);基于 RN Primitives(Radix 移植);部分重组件依赖 reanimated → 选轻量组件集(button/card/input/label/tabs/switch/separator),select 类重组件用简单实现替代
+- **现有前端依赖面盘点(共享可行性核心证据,grep 实测)**:三个路由页只依赖 react/react-native/expo-router;src/components(StrategyForm/MetricCards/TradeList)只依赖 react/react-native + api 类型;src/charts 依赖 lightweight-charts(纯 TS) + react-native-webview(**官方支持 macOS ≥0.76 + 新架构**)→ **双壳共源零阻力**:src/api、src/charts、src/components 原样共享,仅需把 expo-router 页面胶水(useState/useEffect 数据流)抽为无路由依赖的共享层
+- **架构结论(候选方案 A)**:frontend/(Expo 58,iOS/Android/Web 不动)+ desktop/ 重建为 react-native-macos 0.83 独立 app(自带 package.json,版本自洽),Metro watchFolders/@source 共享 frontend/src;桌面壳不用 expo-router(裸 RN 无 Expo 模块),自建侧栏导航;Electron 在 macOS 壳功能对齐后删除

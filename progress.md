@@ -68,3 +68,12 @@
 - Electron dist 站内导航缺陷已修(f01a7c6 内嵌静态服务,http 源 + SPA fallback 实证)
 - 验收清单全勾(浏览器人工联调一项待用户);两轮全分支终审(后端 opus + 前端 opus)findings 全部闭环
 - 全程提交推送至 git@github.com:noire02qwq/vnpy-demo.git(main)
+
+## 会话 2026-10-21(Phase 6 桌面 RN-macOS + shadcn/tailwind)
+
+- [x] planning 上下文恢复(catchup + 三文件重读)+ 依赖面盘点(src/ 零 expo-* 依赖,双壳共源可行)
+- [x] 两轮技术调研落 findings:react-native-macos npm latest 0.83.0(GitHub releases 页滞后)、uniwind 1.13(唯一支持 macOS 的 tailwind 引擎,NativeWind 无 macOS 支持被否)、rnr 支持 Uniwind、webview 官方支持 macOS
+- [x] 用户决策:方案 A 双壳共源 + 琥珀行情终端(D10/D11 入 task_plan)
+- [x] 设计 spec 落盘并自审通过(docs/superpowers/specs/2026-10-21-desktop-rnmacos-shadcn-design.md)
+- [x] 用户批准「自主推进」;拉 feat-desktop-rn-macos 分支(本机钩子禁分支名含 /)
+- [ ] S0 spike:uniwind×Expo58 / macos-init+webview / rnr CLI
