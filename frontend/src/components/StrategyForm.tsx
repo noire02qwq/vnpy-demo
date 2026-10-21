@@ -1,22 +1,14 @@
 /**
  * 策略动态表单:meta schema 驱动的参数输入与回测请求装配。
  * - 校验(validateForm)与请求装配(buildRequest)抽为导出纯函数,是测试重点;
- * - schema 驱动控件:enum → 选择器(web 用原生 <select>,native 用按钮行,不新增依赖;
- *   introspect 结论:RN 社区 Picker 已从 core 剥离,为守住"零新依赖"约束选双平台内建实现)、
- *   boolean → Switch、number/integer → TextInput(string state,提交时 Number());
+ * - schema 驱动控件:enum → Segmented(2-3 选项;web 桥接原生 <select>)、
+ *   boolean → Switch、number/integer → Input(mono 数字);
+ * - 视觉:琥珀行情终端 token(className,uniwind);逻辑与样式层解耦;
  * - entry_pct/entry_basis 仅 signal 形态显示;am_size 由后端 warmup 托管,三处
- *   (参数控件/初始 params/请求 params)统一排除;benchmark/cost/warmup 折叠进默认展开的高级设置。
+ *   (参数控件/初始 params/请求 params)统一排除;benchmark/cost/warmup 折叠进高级设置卡片。
  */
 import { useState } from "react";
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Platform, Switch, Text, View } from "react-native";
 import type { FC, ReactNode } from "react";
 import type {
   BacktestRequest,
@@ -26,6 +18,12 @@ import type {
   StrategySpec,
   StrategyType,
 } from "../api/types";
+import { Btn } from "../ui/Button";
+import { Input } from "../ui/Input";
+import { Label } from "../ui/Label";
+import { Segmented } from "../ui/Segmented";
+import { Card } from "../ui/Card";
+import { UIText } from "../ui/Text";
 
 /** 表单状态:数字输入以 string 暂存(空串=未填),提交时经 buildRequest 转换 */
 export interface FormState {
@@ -271,7 +269,7 @@ export function createInitialState(meta: StrategyMeta | undefined): FormState {
 interface WebSelectProps {
   value: string;
   onChange: (event: { target: { value: string } }) => void;
-  style?: { padding: number; borderWidth: number; borderColor: string; borderRadius: number };
+  style?: Record<string, string | number>;
   children?: ReactNode;
 }
 
@@ -279,7 +277,20 @@ interface WebSelectProps {
 const WebSelect = "select" as unknown as FC<WebSelectProps>;
 const WebOption = "option" as unknown as FC<{ value: string; children: string }>;
 
-/** 枚举选择器:web 用原生 select,native 用按钮行(选中项反色标记) */
+/** web 端 select 的琥珀终端配色(DOM 原生样式,非 className) */
+const WEB_SELECT_STYLE = {
+  padding: 8,
+  borderWidth: 1,
+  borderStyle: "solid",
+  borderColor: "#2C251B",
+  borderRadius: 6,
+  backgroundColor: "#14110D",
+  color: "#EDE4D3",
+  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+  fontSize: 13,
+} as const;
+
+/** 枚举选择器:web 用原生 select,native 用 Segmented(选中态 accent) */
 function EnumSelect({
   value,
   options,
@@ -294,7 +305,7 @@ function EnumSelect({
       <WebSelect
         value={value}
         onChange={(event) => onSelect(event.target.value)}
-        style={styles.select}
+        style={WEB_SELECT_STYLE}
       >
         {options.map((option) => (
           <WebOption key={option} value={option}>
@@ -305,29 +316,19 @@ function EnumSelect({
     );
   }
   return (
-    <View style={styles.row}>
-      {options.map((option) => {
-        const active = option === value;
-        return (
-          <Pressable
-            key={option}
-            onPress={() => onSelect(option)}
-            style={[styles.chip, active && styles.chipActive]}
-          >
-            <Text style={active ? styles.chipTextActive : styles.chipText}>
-              {option}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
+    <Segmented
+      value={value}
+      options={options.map((option) => ({ value: option, label: option }))}
+      onChange={onSelect}
+    />
   );
 }
 
+/** 字段组:标签 + 控件 */
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
+    <View className="mb-2.5">
+      <Label>{label}</Label>
       {children}
     </View>
   );
@@ -348,7 +349,7 @@ export function StrategyForm({
   if (metas.length === 0) {
     return (
       <View>
-        <Text>加载策略元数据…</Text>
+        <UIText variant="muted">加载策略元数据…</UIText>
       </View>
     );
   }
@@ -404,40 +405,42 @@ export function StrategyForm({
       </Field>
 
       <Field label="标的代码">
-        <TextInput
-          style={styles.input}
+        <Input
           placeholder="标的代码,如 AAPL"
           value={state.symbol}
-          onChangeText={(symbol) => patch({ symbol: symbol.toUpperCase() })}
+          onChange={(symbol) => patch({ symbol: symbol.toUpperCase() })}
         />
       </Field>
 
-      <View style={styles.row}>
-        <Field label="开始日期">
-          <TextInput
-            style={styles.input}
-            placeholder="开始日期 YYYY-MM-DD"
-            value={state.start}
-            onChangeText={(start) => patch({ start })}
-          />
-        </Field>
-        <Field label="结束日期">
-          <TextInput
-            style={styles.input}
-            placeholder="结束日期 YYYY-MM-DD"
-            value={state.end}
-            onChangeText={(end) => patch({ end })}
-          />
-        </Field>
+      <View className="flex-row flex-wrap gap-2">
+        <View className="flex-1 min-w-[140px]">
+          <Field label="开始日期">
+            <Input
+              placeholder="开始日期 YYYY-MM-DD"
+              value={state.start}
+              onChange={(start) => patch({ start })}
+              numeric
+            />
+          </Field>
+        </View>
+        <View className="flex-1 min-w-[140px]">
+          <Field label="结束日期">
+            <Input
+              placeholder="结束日期 YYYY-MM-DD"
+              value={state.end}
+              onChange={(end) => patch({ end })}
+              numeric
+            />
+          </Field>
+        </View>
       </View>
 
       <Field label="初始资金">
-        <TextInput
-          style={styles.input}
+        <Input
           placeholder="100000"
-          keyboardType="numeric"
+          numeric
           value={state.initialCapital}
-          onChangeText={(initialCapital) => patch({ initialCapital })}
+          onChange={(initialCapital) => patch({ initialCapital })}
         />
       </Field>
 
@@ -458,11 +461,10 @@ export function StrategyForm({
                 onValueChange={(value) => patchParam(key, value)}
               />
             ) : (
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
+              <Input
+                numeric
                 value={typeof raw === "string" ? raw : ""}
-                onChangeText={(value) => patchParam(key, value)}
+                onChange={(value) => patchParam(key, value)}
               />
             )}
           </Field>
@@ -470,120 +472,83 @@ export function StrategyForm({
       })}
 
       {isSignal && (
-        <View style={styles.row}>
-          <Field label="仓位比例(%)">
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              placeholder={DEFAULT_ENTRY_PCT}
-              value={state.entryPct}
-              onChangeText={(entryPct) => patch({ entryPct })}
-            />
-          </Field>
-          <Field label="建仓基准">
-            <EnumSelect
-              value={state.entryBasis}
-              options={["total", "cash"]}
-              onSelect={(value) => patch({ entryBasis: value as EntryBasis })}
-            />
-          </Field>
+        <View className="flex-row flex-wrap gap-2">
+          <View className="flex-1 min-w-[140px]">
+            <Field label="仓位比例(%)">
+              <Input
+                numeric
+                placeholder={DEFAULT_ENTRY_PCT}
+                value={state.entryPct}
+                onChange={(entryPct) => patch({ entryPct })}
+              />
+            </Field>
+          </View>
+          <View className="flex-1 min-w-[140px]">
+            <Field label="建仓基准">
+              <EnumSelect
+                value={state.entryBasis}
+                options={["total", "cash"]}
+                onSelect={(value) => patch({ entryBasis: value as EntryBasis })}
+              />
+            </Field>
+          </View>
         </View>
       )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>高级设置</Text>
+      <Card className="my-2">
+        <UIText variant="heading" className="mb-1.5 text-sm">
+          高级设置
+        </UIText>
         <Field label="基准代码">
-          <TextInput
-            style={styles.input}
+          <Input
             placeholder={DEFAULT_BENCHMARK}
             value={state.benchmarkSymbol}
-            onChangeText={(benchmarkSymbol) => patch({ benchmarkSymbol })}
+            onChange={(benchmarkSymbol) => patch({ benchmarkSymbol })}
           />
         </Field>
-        <View style={styles.row}>
-          <Field label="佣金率">
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              placeholder="0.001"
-              value={state.commissionRate}
-              onChangeText={(commissionRate) => patch({ commissionRate })}
-            />
-          </Field>
-          <Field label="滑点">
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              placeholder="0.01"
-              value={state.slippage}
-              onChangeText={(slippage) => patch({ slippage })}
-            />
-          </Field>
-          <Field label="暖机根数">
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              placeholder="100"
-              value={state.warmupBars}
-              onChangeText={(warmupBars) => patch({ warmupBars })}
-            />
-          </Field>
+        <View className="flex-row flex-wrap gap-2">
+          <View className="flex-1 min-w-[110px]">
+            <Field label="佣金率">
+              <Input
+                numeric
+                placeholder="0.001"
+                value={state.commissionRate}
+                onChange={(commissionRate) => patch({ commissionRate })}
+              />
+            </Field>
+          </View>
+          <View className="flex-1 min-w-[110px]">
+            <Field label="滑点">
+              <Input
+                numeric
+                placeholder="0.01"
+                value={state.slippage}
+                onChange={(slippage) => patch({ slippage })}
+              />
+            </Field>
+          </View>
+          <View className="flex-1 min-w-[110px]">
+            <Field label="暖机根数">
+              <Input
+                numeric
+                placeholder="100"
+                value={state.warmupBars}
+                onChange={(warmupBars) => patch({ warmupBars })}
+              />
+            </Field>
+          </View>
         </View>
-      </View>
+      </Card>
 
       {error !== null && (
-        <Text style={styles.error} testID="strategy-form-error">
+        <Text testID="strategy-form-error" className="mb-2 text-xs text-up">
           {error}
         </Text>
       )}
 
-      <Pressable
-        style={[styles.submit, submitting && styles.submitDisabled]}
-        onPress={handleSubmit}
-        disabled={submitting}
-      >
-        <Text style={styles.submitText}>开始回测</Text>
-      </Pressable>
+      <Btn onPress={handleSubmit} disabled={submitting} className="mt-1 py-2.5">
+        {submitting ? "回测运行中…" : "开始回测"}
+      </Btn>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  field: { marginBottom: 10 },
-  label: { fontSize: 12, color: "#666666", marginBottom: 4 },
-  input: {
-    borderWidth: 1,
-    borderColor: "#CCCCCC",
-    borderRadius: 6,
-    padding: 8,
-    fontSize: 14,
-  },
-  select: {
-    padding: 8,
-    borderWidth: 1,
-    borderColor: "#CCCCCC",
-    borderRadius: 6,
-  },
-  row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: "#CCCCCC",
-    borderRadius: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-  },
-  chipActive: { backgroundColor: "#1C1C1E", borderColor: "#1C1C1E" },
-  chipText: { fontSize: 13 },
-  chipTextActive: { fontSize: 13, color: "#FFFFFF" },
-  section: { marginTop: 8, marginBottom: 8 },
-  sectionTitle: { fontSize: 14, fontWeight: "600", marginBottom: 6 },
-  error: { color: "#C0392B", marginBottom: 8 },
-  submit: {
-    backgroundColor: "#1C6EFE",
-    borderRadius: 6,
-    padding: 12,
-    alignItems: "center",
-  },
-  submitDisabled: { opacity: 0.5 },
-  submitText: { color: "#FFFFFF", fontSize: 15 },
-});

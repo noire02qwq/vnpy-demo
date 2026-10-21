@@ -48,9 +48,12 @@ it("StatusLine 渲染品牌、后端状态与右上下文", async () => {
   expect(onRetry).toHaveBeenCalledTimes(1);
 });
 
-it("StatusLine 三态文案(probing/online)与禁用重试", async () => {
-  const { getByText, rerender } = await render(<StatusLine backendOk={null} />);
-  expect(getByText("PROBING")).toBeTruthy();
+it("StatusLine null 态不显示后端状态(仅品牌),true 显示 ONLINE", async () => {
+  const { getByText, queryByText, rerender } = await render(
+    <StatusLine backendOk={null} />,
+  );
+  expect(getByText("VND-DEMO")).toBeTruthy();
+  expect(queryByText("PROBING")).toBeNull();
   await rerender(<StatusLine backendOk={true} />);
   expect(getByText("BACKEND ONLINE")).toBeTruthy();
 });

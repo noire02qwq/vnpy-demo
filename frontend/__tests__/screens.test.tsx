@@ -118,6 +118,23 @@ describe("ConfigScreen(无路由依赖)", () => {
     expect(onOpenHistory).toHaveBeenCalledTimes(1);
   });
 
+  it("渲染终端状态行 VND-DEMO(底线上下文)", async () => {
+    mockGetStrategies.mockResolvedValue([macdMeta]);
+    const screen = await render(
+      <ConfigScreen onSubmit={jest.fn()} onOpenHistory={jest.fn()} />,
+    );
+    expect(await screen.findByText("VND-DEMO")).toBeTruthy();
+  });
+
+  it("加载失败仍呈现失败文案与状态行(回归保护)", async () => {
+    mockGetStrategies.mockRejectedValue(new client.ApiError("bad", "INVALID_SYMBOL"));
+    const screen = await render(
+      <ConfigScreen onSubmit={jest.fn()} onOpenHistory={jest.fn()} />,
+    );
+    expect(await screen.findByText(/策略元数据加载失败:/)).toBeTruthy();
+    expect(screen.getByText("VND-DEMO")).toBeTruthy();
+  });
+
   it("提交成功回调 onSubmit(runId)", async () => {
     mockGetStrategies.mockResolvedValue([macdMeta]);
     mockRunBacktest.mockResolvedValue({ ...sampleResult, id: "run-9" });

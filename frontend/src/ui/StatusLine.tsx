@@ -22,7 +22,7 @@ export const StatusLine: FC<{
   right?: ReactNode;
   className?: string;
 }> = ({ backendOk, onRetry, right, className }) => {
-  const state = backendOk === null ? "probing" : backendOk ? "online" : "offline";
+  const state = backendOk === null ? null : backendOk ? "online" : "offline";
   return (
     <View
       className={cn(
@@ -33,17 +33,19 @@ export const StatusLine: FC<{
       <Text className="text-xs text-ink-dim" style={{ fontFamily: FONT_MONO }}>
         VND-DEMO
       </Text>
-      <Pressable
-        accessibilityRole="button"
-        onPress={onRetry}
-        disabled={!onRetry}
-        className="ml-3 flex-row items-center"
-      >
-        <View className={cn("mr-1.5 h-1.5 w-1.5 rounded-full", STATE_COLOR[state])} />
-        <Text className="text-xs text-ink-dim" style={{ fontFamily: FONT_MONO }}>
-          {STATE_TEXT[state]}
-        </Text>
-      </Pressable>
+      {state !== null && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onRetry}
+          disabled={!onRetry}
+          className="ml-3 flex-row items-center"
+        >
+          <View className={cn("mr-1.5 h-1.5 w-1.5 rounded-full", STATE_COLOR[state])} />
+          <Text className="text-xs text-ink-dim" style={{ fontFamily: FONT_MONO }}>
+            {STATE_TEXT[state]}
+          </Text>
+        </Pressable>
+      )}
       {right !== undefined && (
         <Text
           className="ml-auto text-xs text-ink-dim"
